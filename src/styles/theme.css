@@ -45,9 +45,16 @@
   --dg-icon-default: var(--dg-grey-200);
   --dg-divider-strong: var(--dg-grey-400);
 
-  /* voice identity slots: assign per voice, do not hardcode at the call site */
-  --dg-voice-1: var(--dg-accent);
-  --dg-voice-2: var(--dg-accent-alt);
+  /* Voice identity. Set per tile by the [data-orb] rules in block 1b, never at
+     the call site. These are the fallback: a voice the orb mapping has never
+     heard of paints in the accent, which reads as deliberately unbranded
+     instead of invisible. See src/lib/voice-orbs.ts. */
+  --dg-orb-ground: var(--dg-orb-void);
+  --dg-orb-base: var(--dg-accent-dim);
+  --dg-orb-mid: var(--dg-accent);
+  --dg-orb-hi: var(--dg-ink-primary);
+  --dg-orb-glow: var(--dg-accent);
+  --dg-orb-wave: var(--dg-accent);
 
   /* geometry, elevation, motion. Semantic names so components never reach
      into the pack directly. */
@@ -62,6 +69,7 @@
   --dg-orb-glow: var(--dg-orb-glow-blur);
 
   --dg-anim-breathe: var(--dg-motion-breathe);
+  --dg-anim-pulse: var(--dg-motion-pulse);
   --dg-anim-fast: var(--dg-motion-fast);
   --dg-anim-base: var(--dg-motion-base);
   --dg-anim-ease: var(--dg-ease);
@@ -103,6 +111,123 @@
   --dg-va-fab-size: 56px;
   --dg-va-padding: 16px;
   --dg-va-panel-w: min(440px, 100vw);
+}
+
+/* ---------------------------------------------------------------------------
+   1b. VOICE ORB FAMILIES. Palette -> semantic, one rule per family.
+
+   This mapping lives here and not in app.css for the same reason block 1 does:
+   this is the only file allowed to read `--dg-orb-f*-*` palette names. A
+   component sets `data-orb="<n>"` and then uses the semantic names above, so
+   nothing outside this file knows a family number means a color.
+
+   `src/lib/voice-orbs.ts` owns which voice gets which number, and there is a
+   test asserting the two agree in both directions.
+
+   TWO elements carry `data-orb`, and the difference matters:
+
+   - Each `.tile` carries its OWN voice's family, permanently. That is what
+     paints 36 orbs in 36 colors at once.
+   - `.app` carries the CURRENTLY AUDIBLE voice's family, or nothing when the
+     playhead is idle. That is how chrome outside the grid -- the transport
+     fill, the ticker's active word -- picks up the speaker's color, since it
+     is nowhere near the tile in the DOM.
+
+   Both work because custom properties inherit and an element's own
+   declaration beats the one it inherited, so a tile keeps its own color even
+   while sitting inside an `.app` set to some other voice.
+   -------------------------------------------------------------------------- */
+
+/* Family 0 is "no orb for this voice". It exists so that an unmapped tile
+   resets to the accent instead of inheriting whatever `.app` is currently set
+   to -- otherwise a voice Deepgram adds tomorrow would render in the color of
+   whichever tile you happened to be hovering. */
+[data-orb="0"] {
+  --dg-orb-base: var(--dg-accent-dim);
+  --dg-orb-mid: var(--dg-accent);
+  --dg-orb-hi: var(--dg-ink-primary);
+  --dg-orb-glow: var(--dg-accent);
+  --dg-orb-wave: var(--dg-accent);
+}
+
+[data-orb="1"] {
+  --dg-orb-base: var(--dg-orb-f1-base);
+  --dg-orb-mid: var(--dg-orb-f1-mid);
+  --dg-orb-hi: var(--dg-orb-f1-hi);
+  --dg-orb-glow: var(--dg-orb-f1-glow);
+  --dg-orb-wave: var(--dg-orb-f1-wave);
+}
+
+[data-orb="2"] {
+  --dg-orb-base: var(--dg-orb-f2-base);
+  --dg-orb-mid: var(--dg-orb-f2-mid);
+  --dg-orb-hi: var(--dg-orb-f2-hi);
+  --dg-orb-glow: var(--dg-orb-f2-glow);
+  --dg-orb-wave: var(--dg-orb-f2-wave);
+}
+
+[data-orb="3"] {
+  --dg-orb-base: var(--dg-orb-f3-base);
+  --dg-orb-mid: var(--dg-orb-f3-mid);
+  --dg-orb-hi: var(--dg-orb-f3-hi);
+  --dg-orb-glow: var(--dg-orb-f3-glow);
+  --dg-orb-wave: var(--dg-orb-f3-wave);
+}
+
+[data-orb="4"] {
+  --dg-orb-base: var(--dg-orb-f4-base);
+  --dg-orb-mid: var(--dg-orb-f4-mid);
+  --dg-orb-hi: var(--dg-orb-f4-hi);
+  --dg-orb-glow: var(--dg-orb-f4-glow);
+  --dg-orb-wave: var(--dg-orb-f4-wave);
+}
+
+[data-orb="5"] {
+  --dg-orb-base: var(--dg-orb-f5-base);
+  --dg-orb-mid: var(--dg-orb-f5-mid);
+  --dg-orb-hi: var(--dg-orb-f5-hi);
+  --dg-orb-glow: var(--dg-orb-f5-glow);
+  --dg-orb-wave: var(--dg-orb-f5-wave);
+}
+
+[data-orb="6"] {
+  --dg-orb-base: var(--dg-orb-f6-base);
+  --dg-orb-mid: var(--dg-orb-f6-mid);
+  --dg-orb-hi: var(--dg-orb-f6-hi);
+  --dg-orb-glow: var(--dg-orb-f6-glow);
+  --dg-orb-wave: var(--dg-orb-f6-wave);
+}
+
+[data-orb="7"] {
+  --dg-orb-base: var(--dg-orb-f7-base);
+  --dg-orb-mid: var(--dg-orb-f7-mid);
+  --dg-orb-hi: var(--dg-orb-f7-hi);
+  --dg-orb-glow: var(--dg-orb-f7-glow);
+  --dg-orb-wave: var(--dg-orb-f7-wave);
+}
+
+[data-orb="8"] {
+  --dg-orb-base: var(--dg-orb-f8-base);
+  --dg-orb-mid: var(--dg-orb-f8-mid);
+  --dg-orb-hi: var(--dg-orb-f8-hi);
+  --dg-orb-glow: var(--dg-orb-f8-glow);
+  --dg-orb-wave: var(--dg-orb-f8-wave);
+}
+
+[data-orb="9"] {
+  --dg-orb-base: var(--dg-orb-f9-base);
+  --dg-orb-mid: var(--dg-orb-f9-mid);
+  --dg-orb-hi: var(--dg-orb-f9-hi);
+  --dg-orb-glow: var(--dg-orb-f9-glow);
+  --dg-orb-wave: var(--dg-orb-f9-wave);
+}
+
+[data-orb="10"] {
+  --dg-orb-base: var(--dg-orb-f10-base);
+  --dg-orb-mid: var(--dg-orb-f10-mid);
+  --dg-orb-hi: var(--dg-orb-f10-hi);
+  --dg-orb-glow: var(--dg-orb-f10-glow);
+  --dg-orb-wave: var(--dg-orb-f10-wave);
 }
 
 /* ---------------------------------------------------------------------------

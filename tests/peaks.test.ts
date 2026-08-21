@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { bucketRms } from '../scripts/peaks.ts'
-import { peaksPath } from '../src/lib/peaks.ts'
+import { bucketLevels, bucketRms } from '../scripts/peaks.ts'
+import { levelAt, peaksPath } from '../src/lib/peaks.ts'
 
 function tone(length: number, amplitude: number): Int16Array {
   const out = new Int16Array(length)
@@ -73,5 +73,82 @@ describe('peaksPath', () => {
   it('produces only finite coordinates', () => {
     const d = peaksPath([0, 0.5, 1])
     expect(d).not.toMatch(/NaN|Infinity|undefined/)
+  })
+})
+
+describe('bucketLevels', () => {
+  it('returns one value per bucket, quantized to 0..255', () => {
+    const out = bucketLevels(tone(8000, 0.6), 32)
+    expect(out).toHaveLength(32)
+    for (const v of out) {
+      expect(Number.isInteger(v)).toBe(true)
+      expect(v).toBeGreaterThanOrEqual(0)
+      expect(v).toBeLessThanOrEqual(255)
+    }
+  })
+
+  it('puts the loudest bucket at full scale', () => {
+    const samples = new Int16Array(800)
+    for (let i = 400; i < 800; i += 1) samples[i] = Math.round(Math.sin(i) * 32767)
+    expect(Math.max(...bucketLevels(samples, 2))).toBe(255)
+  })
+
+  it('keeps a quiet passage quiet, unlike the bars', () => {
+    // Half loud, half at a tenth. bucketRms range-stretches the quiet half to
+    // its FLOOR; bucketLevels must leave it proportional instead, or the orb
+    // would swell just as hard through a murmur as through a shout.
+    const samples = new Int16Array(2000)
+    for (let i = 0; i < 1000; i += 1) samples[i] = Math.round(Math.sin(i) * 32767)
+    for (let i = 1000; i < 2000; i += 1) samples[i] = Math.round(Math.sin(i) * 3277)
+    const [loud, quiet] = bucketLevels(samples, 2) as [number, number]
+    expect(loud).toBe(255)
+    expect(quiet).toBeGreaterThan(0)
+    expect(quiet).toBeLessThan(loud * 0.5)
+  })
+
+  it('survives silence and an empty clip without producing NaN', () => {
+    expect(bucketLevels(new Int16Array(500), 4)).toEqual([0, 0, 0, 0])
+    expect(bucketLevels(new Int16Array(0), 3)).toEqual([0, 0, 0])
+  })
+})
+
+describe('levelAt', () => {
+  it('returns 0 when there is no envelope, rather than throwing', () => {
+    expect(levelAt(null, 0.5)).toBe(0)
+    expect(levelAt(undefined, 0.5)).toBe(0)
+    expect(levelAt([], 0.5)).toBe(0)
+  })
+
+  it('normalizes 0..255 down to 0..1', () => {
+    expect(levelAt([255], 0)).toBe(1)
+    expect(levelAt([0], 0)).toBe(0)
+  })
+
+  it('lands exactly on the first and last bucket at the ends', () => {
+    // Not one bucket past the end: that was worth a test because the obvious
+    // `progress * length` overruns the array on the final frame.
+    expect(levelAt([0, 128, 255], 0)).toBeCloseTo(0)
+    expect(levelAt([0, 128, 255], 1)).toBeCloseTo(1)
+  })
+
+  it('interpolates between neighbours instead of snapping', () => {
+    // Halfway between bucket 0 and bucket 1 of a two-bucket envelope.
+    expect(levelAt([0, 255], 0.5)).toBeCloseTo(0.5)
+    expect(levelAt([0, 255], 0.25)).toBeCloseTo(0.25)
+  })
+
+  it('clamps a position outside 0..1', () => {
+    expect(levelAt([10, 200], -5)).toBeCloseTo(10 / 255)
+    expect(levelAt([10, 200], 9)).toBeCloseTo(200 / 255)
+  })
+
+  it('is finite across a full sweep, which is how it is actually read', () => {
+    const levels = Array.from({ length: 64 }, (_, i) => (i * 4) % 256)
+    for (let f = 0; f <= 1000; f += 1) {
+      const v = levelAt(levels, f / 1000)
+      expect(Number.isFinite(v)).toBe(true)
+      expect(v).toBeGreaterThanOrEqual(0)
+      expect(v).toBeLessThanOrEqual(1)
+    }
   })
 })

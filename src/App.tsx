@@ -17,6 +17,7 @@ import {
   type LoadedManifest,
   type Voice,
 } from './lib/voices.ts'
+import { orbFamily } from './lib/voice-orbs.ts'
 import { VoiceTile } from './components/VoiceTile.tsx'
 import { TransportBar } from './components/TransportBar.tsx'
 import { Ticker } from './components/Ticker.tsx'
@@ -278,7 +279,16 @@ export function App() {
   }
 
   return (
-    <div className="app">
+    /**
+     * `data-orb` here is the AUDIBLE voice's color family, and it is how the
+     * chrome outside the grid -- the transport fill, the ticker's active word
+     * -- gets painted in the voice you are hearing. Those live nowhere near a
+     * tile in the DOM, so the family has to ride on a common ancestor and
+     * inherit down. Each tile still carries its own family and overrides this
+     * for itself. Absent while nothing plays, which falls the chrome back to
+     * the accent. See the block-1b comment in theme.css.
+     */
+    <div className="app" data-orb={focusedVoice ? (orbFamily(focusedVoice.id) ?? 0) : undefined}>
       <header className="bar">
         <div className="bar-title">
           <h1>Flux Voice Explorer</h1>
@@ -379,7 +389,8 @@ export function App() {
               // conversion is the identity and it behaves as the average voice.
               // There is deliberately no "no timeline" state to special-case.
               starts={timings?.voices[voice.id] ?? canonicalStarts}
-              peaks={peaks?.voices[voice.id] ?? null}
+              peaks={peaks?.voices[voice.id]?.bars ?? null}
+              levels={peaks?.voices[voice.id]?.levels ?? null}
               showWave={wideEnoughForWave}
               onFocus={handleFocus}
               onSeekLocal={handleSeekLocal}

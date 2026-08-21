@@ -23,11 +23,26 @@ import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { CLIP_SCRIPT_HASH } from '../src/lib/clip-script.ts'
 import { CLIPS_DIR, CONCURRENCY, carryForward, mapLimit, readJson, runFfmpeg } from './shared.ts'
-import type { ClipPeaks } from '../src/lib/peaks.ts'
+import type { ClipEnvelope, ClipPeaks } from '../src/lib/peaks.ts'
 import type { Manifest } from '../src/lib/voices.ts'
 
 /** Enough to show phrasing in a 180px tile without being noise. */
 const BUCKETS = 72
+/**
+ * Level samples per clip, for the orb. Nothing draws these, so the constraint
+ * is time resolution rather than pixels: the clips run 84 to 142 seconds, so
+ * 1536 puts a sample every 55-92ms. English syllables run about 200ms, which
+ * means the orb moves per syllable. Dropping to the 72 the bars use would put
+ * one sample every 1.4 seconds and the orb would barely move at all.
+ *
+ * Measured cost: 191 KB of JSON across 36 voices, 69 KB gzipped. That is about
+ * what the JS bundle weighs, so it is not free -- but peaks.json is fetched
+ * after first paint and the orb falls back to a fixed pulse until it lands, so
+ * it delays nothing, and it is a quarter of a percent of the 28 MB of audio it
+ * describes. Halving to 768 buckets would drop it to ~35 KB and put a sample
+ * every 110-185ms, which is at or past the length of a syllable.
+ */
+const LEVEL_BUCKETS = 1536
 const DECODE_RATE = 8000
 
 async function decode(clipPath: string): Promise<Int16Array> {
@@ -69,14 +84,55 @@ export function bucketRms(samples: Int16Array, buckets: number): number[] {
   })
 }
 
+/**
+ * Lifts quiet speech without flattening the pauses. Below 1, so it is the
+ * opposite of the bars' GAMMA: the bars want contrast, the orb wants presence.
+ */
+const LEVEL_GAMMA = 0.75
+
+/**
+ * The orb's envelope: RMS per bucket over the clip's own peak, quantized 0..255.
+ *
+ * Deliberately NOT the range stretch `bucketRms` does. That maps each clip's
+ * quietest bucket to zero, which for the orb would mean the softest moment of
+ * every clip reads as total silence -- and because the stretch is per clip, a
+ * uniformly loud read and a wildly dynamic one would both come out spanning the
+ * full range. Dividing by the peak keeps a quiet passage looking quiet.
+ */
+export function bucketLevels(samples: Int16Array, buckets: number): number[] {
+  if (samples.length === 0) return new Array(buckets).fill(0)
+  const width = samples.length / buckets
+  const out = new Array<number>(buckets)
+  let loudest = 0
+  for (let b = 0; b < buckets; b += 1) {
+    const from = Math.floor(b * width)
+    const to = Math.min(Math.floor((b + 1) * width), samples.length)
+    let sum = 0
+    for (let i = from; i < to; i += 1) {
+      const v = samples[i]! / 32768
+      sum += v * v
+    }
+    const rms = to > from ? Math.sqrt(sum / (to - from)) : 0
+    out[b] = rms
+    if (rms > loudest) loudest = rms
+  }
+  if (loudest <= 0) return out.map(() => 0)
+  return out.map((v) => Math.round((v / loudest) ** LEVEL_GAMMA * 255))
+}
+
 export async function computePeaks(options: {
   voices: { id: string; clip: string }[]
   force?: boolean
 }): Promise<void> {
   const outPath = path.join(CLIPS_DIR, 'peaks.json')
-  const { carried, existing } = await carryForward<number[]>(
+  const { carried, existing } = await carryForward<ClipEnvelope>(
     outPath,
-    (prior) => prior.scriptHash === CLIP_SCRIPT_HASH && prior.buckets === BUCKETS,
+    // `levelBuckets` is part of the freshness test, so a file written before the
+    // orb existed is discarded rather than carried forward half-shaped.
+    (prior) =>
+      prior.scriptHash === CLIP_SCRIPT_HASH &&
+      prior.buckets === BUCKETS &&
+      prior.levelBuckets === LEVEL_BUCKETS,
     options.force ?? false,
   )
 
@@ -85,17 +141,21 @@ export async function computePeaks(options: {
     console.log(`Peaks: nothing to do (${Object.keys(carried).length} cached)`)
     return
   }
-  console.log(`Computing peaks for ${todo.length} clips (${BUCKETS} buckets)`)
+  console.log(
+    `Computing peaks for ${todo.length} clips (${BUCKETS} bars, ${LEVEL_BUCKETS} levels)`,
+  )
 
   // Starts from `carried`, not empty: a failure must not discard good data.
-  const voices: Record<string, number[]> = { ...carried }
+  const voices: Record<string, ClipEnvelope> = { ...carried }
   const failures: string[] = []
   await mapLimit(todo, CONCURRENCY, async (voice) => {
     try {
-      voices[voice.id] = bucketRms(
-        await decode(path.join(CLIPS_DIR, path.basename(voice.clip))),
-        BUCKETS,
-      )
+      // Decoded once, bucketed twice. The decode is the expensive half.
+      const samples = await decode(path.join(CLIPS_DIR, path.basename(voice.clip)))
+      voices[voice.id] = {
+        bars: bucketRms(samples, BUCKETS),
+        levels: bucketLevels(samples, LEVEL_BUCKETS),
+      }
     } catch (err) {
       failures.push(`${voice.id}: ${(err as Error).message}`)
     }
@@ -104,6 +164,7 @@ export async function computePeaks(options: {
   const json = `${JSON.stringify({
     scriptHash: CLIP_SCRIPT_HASH,
     buckets: BUCKETS,
+    levelBuckets: LEVEL_BUCKETS,
     voices,
   } satisfies ClipPeaks)}\n`
   await writeFile(outPath, json)

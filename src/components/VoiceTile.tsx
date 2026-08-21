@@ -1,5 +1,6 @@
-import { memo, useEffect, useMemo, useRef } from 'react'
-import { peaksPath } from '../lib/peaks.ts'
+import { memo, useEffect, useMemo, useRef, type CSSProperties } from 'react'
+import { levelAt, peaksPath } from '../lib/peaks.ts'
+import { orbFamily } from '../lib/voice-orbs.ts'
 import type { Voice } from '../lib/voices.ts'
 import type { SyncPlayer } from '../lib/sync-player.ts'
 
@@ -28,6 +29,12 @@ type Props = {
    * drawn while this tile is the audible one.
    */
   peaks: number[] | null
+  /**
+   * High-resolution amplitude for this clip, driving the orb. Null on the same
+   * terms as `peaks`; the orb falls back to a fixed pulse rather than sitting
+   * still, so a clone that has not run `pnpm peaks` still looks alive.
+   */
+  levels: number[] | null
   /**
    * False on phones, where the row layout has no empty middle to fill. A real
    * prop rather than `display: none`: hidden-but-mounted still wrote a clipPath
@@ -62,11 +69,27 @@ export const VoiceTile = memo(function VoiceTile({
   paceRank,
   starts,
   peaks,
+  levels,
   showWave,
   onFocus,
   onSeekLocal,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  /**
+   * The orb's amplitude, 0..1 at the current position through this clip.
+   *
+   * Recomputed every animation frame while focused, which is affordable: this
+   * is one array lookup and a lerp, and the focused tile is already
+   * re-rendering at that rate for the fill hairline and the waveform clip. It
+   * reaches CSS as a custom property rather than as a computed transform so
+   * that the mapping from level to scale, glow and saturation stays in
+   * app.css next to the rest of the orb.
+   *
+   * Rounded for the same reason the clipPath width is: the raw product
+   * stringifies as a 17-digit float into the DOM sixty times a second.
+   */
+  const orbLevel = focused ? levelAt(levels, localProgress).toFixed(3) : '0'
 
   // The focused tile re-renders every animation frame, and the bar path is 72
   // segments of string building. It depends only on the clip.
@@ -79,6 +102,17 @@ export const VoiceTile = memo(function VoiceTile({
       chars: voice.characteristics.slice(0, 3).join(', '),
       duration: `${voice.duration.toFixed(1)}s`,
       clipId: `played-${voice.id}`,
+      /**
+       * Orb color family. It rides on the element as a number rather than as
+       * inline custom properties so that the palette stays inside the style
+       * pack -- `theme.css` turns this into colors. See `voice-orbs.ts`.
+       *
+       * `0` when the voice has no orb, and NOT undefined: the attribute has to
+       * be present so the tile resets to the accent. Left off, it would
+       * inherit the audible voice's colors from `data-orb` on `.app` and an
+       * unknown voice would wear whichever tile you were hovering.
+       */
+      orb: orbFamily(voice.id) ?? 0,
     }),
     [voice],
   )
@@ -104,6 +138,7 @@ export const VoiceTile = memo(function VoiceTile({
       className="tile"
       data-focused={focused || undefined}
       data-failed={failed || undefined}
+      data-orb={text.orb}
       onPointerEnter={() => onFocus(voice.id)}
       onPointerLeave={(e) => onFocus(null, e.pointerType === 'mouse')}
       onFocus={() => onFocus(voice.id)}
@@ -121,6 +156,18 @@ export const VoiceTile = memo(function VoiceTile({
           app.css. The accent line sits inside .tile-head so that on a phone it
           can share the first row with the name. */}
       <span className="tile-head">
+        {/* Decorative: the name next to it already says which voice this is,
+            and the orb's color identifies a family of voices rather than one,
+            so reading it out would be a lie as often as not.
+
+            `data-reactive` is what tells CSS the level is real, so it can use
+            the fixed pulse when peaks.json has not been generated. */}
+        <span
+          className="tile-orb"
+          aria-hidden="true"
+          data-reactive={levels ? '' : undefined}
+          style={{ '--orb-level': orbLevel } as CSSProperties}
+        />
         <span className="tile-name">{voice.name}</span>
         <span className="tile-meta">{text.meta}</span>
         <span className="tile-pace" title={`${text.duration} for the same script`}>

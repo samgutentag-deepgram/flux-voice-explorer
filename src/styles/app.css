@@ -136,13 +136,18 @@ body {
   border-radius: var(--dg-shape-control);
 }
 
+/* Takes the speaking voice's color, from `data-orb` on `.app`. Falls back to
+   the accent when nothing is focused, so the bar is green at rest and picks up
+   the voice as you sweep. Only the color transitions: `transform` is written
+   every animation frame by React and must not ease. */
 .transport-fill {
   position: absolute;
   inset: 0;
   transform-origin: left center;
-  background: var(--dg-state-live);
+  background: var(--dg-orb-wave);
   border-radius: var(--dg-shape-control);
   pointer-events: none;
+  transition: background-color var(--dg-anim-base) var(--dg-anim-ease);
 }
 
 /* The real <input type=range> sits on top, invisible, so keyboard and drag
@@ -270,8 +275,10 @@ body {
   transition: color var(--dg-anim-fast) var(--dg-anim-ease);
 }
 
+/* The word under the marker is the one you are hearing, so it wears the voice
+   that is saying it. Same `data-orb` on `.app` as the transport fill. */
 .ticker-word[data-word-active] {
-  color: var(--dg-state-live);
+  color: var(--dg-orb-wave);
   font-weight: var(--dg-weight-medium);
 }
 
@@ -282,7 +289,7 @@ body {
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: var(--dg-state-live);
+  background: var(--dg-orb-wave);
   opacity: 0.35;
   pointer-events: none;
 }
@@ -393,19 +400,170 @@ body {
 
 .tile-head {
   display: grid;
-  grid-template-columns: 1fr auto;
+  /* orb | name and accent line | pace pip */
+  grid-template-columns: auto 1fr auto;
   gap: 0 0.5rem;
   align-items: center;
 }
 
+/* Every cell is placed explicitly. With the orb taking column 1 and spanning
+   both rows, auto-placement would drop the accent line into the orb's cell. */
+.tile-head .tile-orb {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+}
+
+.tile-head .tile-name {
+  grid-row: 1;
+  grid-column: 2;
+}
+
 /* The accent line spans the name column only, so the pace pip keeps its corner. */
 .tile-head .tile-meta {
-  grid-column: 1;
+  grid-row: 2;
+  grid-column: 2;
 }
 
 .tile-head .tile-pace {
   grid-row: 1;
-  grid-column: 2;
+  grid-column: 3;
+}
+
+/* The voice orb, Deepgram's per-voice identity mark.
+   ---------------------------------------------------------------------------
+   A stack of gradients, not the source SVG. The real orb is four blurred
+   shapes behind an feGaussianBlur, and 36 of those on screen at once is a
+   filter pass per tile per paint for a mark that renders at 18px. Three
+   radial gradients over the ground color land in the same place visually and
+   cost nothing, because the browser rasterizes each tile's background once
+   and the focused tile re-renders every animation frame.
+
+   One consequence to know about: the source SVGs use two different geometries
+   -- most are stacked ellipses, a few (Maeve, Meena) are wave-shaped paths.
+   This approximates all ten families with the ellipse stack and varies only
+   the colors, which is invisible at this size and would not be at 144px. */
+.tile-orb {
+  /* One knob. The rim light and the pulse are both derived from it, so the
+     mobile override below only has to change this line. */
+  --orb-size: 36px;
+  /* Amplitude at the current position, 0..1, written by VoiceTile every frame
+     while this tile is the audible one. Declared here so the unfocused 35 have
+     a value and their calc()s resolve. */
+  --orb-level: 0;
+  flex: 0 0 auto;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  border-radius: var(--dg-shape-orb);
+  /* Each layer fades to a transparent copy of ITS OWN color via color-mix,
+     never to the `transparent` keyword: that keyword is transparent black, and
+     interpolating toward it drags a grey cast through the midpoint of every
+     stop. The geometry is the ellipse centers and radii from the SVGs,
+     converted to percentages of the 144px viewBox. */
+  background:
+    radial-gradient(
+      ellipse 46% 26% at 50% 57%,
+      var(--dg-orb-hi) 0%,
+      color-mix(in srgb, var(--dg-orb-hi) 45%, transparent) 45%,
+      color-mix(in srgb, var(--dg-orb-hi) 0%, transparent) 78%
+    ),
+    radial-gradient(
+      ellipse 86% 47% at 50% 64%,
+      var(--dg-orb-mid) 0%,
+      color-mix(in srgb, var(--dg-orb-mid) 72%, transparent) 58%,
+      color-mix(in srgb, var(--dg-orb-mid) 0%, transparent) 88%
+    ),
+    radial-gradient(
+      ellipse 94% 60% at 50% 70%,
+      var(--dg-orb-base) 0%,
+      color-mix(in srgb, var(--dg-orb-base) 78%, transparent) 62%,
+      color-mix(in srgb, var(--dg-orb-base) 0%, transparent) 92%
+    ),
+    var(--dg-orb-ground);
+  /* The rim light. In the SVG this is a blurred inverse-circle clipped to the
+     orb, which is to say: a glow that reads from inside the edge. Sized off
+     --orb-size because the SVG's blur is 10% of the orb, not a fixed 8px. */
+  box-shadow: inset 0 0 calc(var(--orb-size) * 0.11) var(--dg-orb-glow);
+  /* Dim until this voice is the audible one. 36 fully-lit orbs would fight the
+     empty-middle contrast the grid relies on to show which tile is playing. */
+  opacity: 0.35;
+  transition:
+    opacity var(--dg-anim-base) var(--dg-anim-ease),
+    transform var(--dg-anim-base) var(--dg-anim-ease);
+}
+
+.tile:hover .tile-orb {
+  opacity: 0.6;
+}
+
+.tile[data-focused] .tile-orb {
+  opacity: 1;
+  /* Promoted only while speaking, not for all 36 tiles at rest. */
+  will-change: transform, filter;
+}
+
+/* Speaking, driven by the audio.
+   ---------------------------------------------------------------------------
+   `--orb-level` is this clip's own amplitude at the current position, so the
+   orb swells on a stressed syllable and drops into a comma. It is the same
+   envelope the waveform bars are drawn from, sampled ~20x finer -- see
+   `levelAt` in src/lib/peaks.ts and LEVEL_BUCKETS in scripts/peaks.ts.
+
+   Scale, bloom and saturation all move together. Any one alone reads as a
+   hover effect; the three together read as output. The bloom is soft on
+   purpose: the tile clips it at narrow grid widths, and a soft edge sliding
+   under the border is invisible where a hard ring would look broken.
+
+   The 90ms linear transition is the smoothing. Levels land about fourteen a
+   second and this target is rewritten every frame, so re-targeting a short
+   linear transition acts as a low-pass filter -- enough to kill the step
+   between two buckets, too short to lag behind a syllable. Doing the same job
+   in JS would need a ref mutated during render. */
+.tile[data-focused] .tile-orb[data-reactive] {
+  transform: scale(calc(1 + var(--orb-level) * 0.34));
+  box-shadow:
+    inset 0 0 calc(var(--orb-size) * (0.11 + var(--orb-level) * 0.14)) var(--dg-orb-glow),
+    0 0 calc(var(--orb-size) * (0.16 + var(--orb-level) * 0.62))
+      color-mix(in srgb, var(--dg-orb-glow) 75%, transparent);
+  filter: saturate(calc(1 + var(--orb-level) * 0.55)) brightness(calc(1 + var(--orb-level) * 0.4));
+  transition:
+    transform 90ms linear,
+    box-shadow 90ms linear,
+    filter 90ms linear;
+}
+
+/* No peaks.json yet, so there is no envelope to follow. A fixed pulse is the
+   honest fallback: it says "this one is playing" without pretending to track
+   audio it cannot see. `pnpm peaks` replaces it with the real thing. */
+.tile[data-focused] .tile-orb:not([data-reactive]) {
+  animation: orb-pulse var(--dg-anim-pulse) var(--dg-anim-ease) infinite;
+}
+
+@keyframes orb-pulse {
+  50% {
+    transform: scale(1.2);
+    filter: saturate(1.4) brightness(1.3);
+  }
+}
+
+.tile[data-failed] .tile-orb {
+  /* A voice whose clip never loaded is not an identity worth advertising. */
+  opacity: 0.18;
+  filter: grayscale(1);
+  animation: none;
+  transform: none;
+}
+
+/* Both the level-driven swell and the fallback pulse are motion, and neither is
+   load-bearing -- the orb is still the only lit one on the grid. */
+@media (prefers-reduced-motion: reduce) {
+  .tile[data-focused] .tile-orb[data-reactive],
+  .tile[data-focused] .tile-orb:not([data-reactive]) {
+    transform: none;
+    filter: none;
+    animation: none;
+    transition: none;
+    box-shadow: inset 0 0 calc(var(--orb-size) * 0.11) var(--dg-orb-glow);
+  }
 }
 
 .tile-name {
@@ -473,8 +631,12 @@ body {
   fill: var(--dg-control-track);
 }
 
+/* The played region carries the voice's own color, so the thing you are
+   hearing and the thing you are looking at agree. `--dg-orb-wave` is the
+   brightest stop in the family rather than its mid tone: this is a 2px shape
+   on a near-black panel and the darker stops vanish. See theme.css. */
 .tile-wave-played {
-  fill: var(--dg-state-live);
+  fill: var(--dg-orb-wave);
 }
 
 .tile-foot {
@@ -720,6 +882,14 @@ body {
   .tile-name {
     flex: 0 0 auto;
     font-size: 0.92rem;
+  }
+
+  .tile-orb {
+    /* .tile-head is flex here, so the grid placements above are inert and the
+       row's `align-items: baseline` would hang the orb off the text baseline. */
+    align-self: center;
+    /* The phone tile is a ~48px row, so the desktop 36px would be the row. */
+    --orb-size: 26px;
   }
 
   .tile-chars {

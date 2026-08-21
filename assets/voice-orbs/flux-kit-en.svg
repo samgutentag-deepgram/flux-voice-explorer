@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" width="144" height="144">
+<defs>
+<clipPath id="cm"><circle cx="72" cy="72" r="72"></circle></clipPath>
+<filter id="lb" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"></feGaussianBlur></filter>
+<filter id="b4" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="4"></feGaussianBlur></filter>
+<filter id="b8" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8"></feGaussianBlur></filter>
+<filter id="bs" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="15"></feGaussianBlur></filter>
+<clipPath id="g26"><rect x="-8" y="9.673" width="159.396" height="145.655"></rect></clipPath>
+</defs>
+<g clip-path="url(#cm)">
+<g filter="url(#lb)">
+<rect x="-20" y="-20" width="184" height="184" fill="rgb(16,16,20)"></rect><g clip-path="url(#g26)"><g transform="translate(-8 9.673)"><path d="M 159.396 145.655 L 145.204 131.496 C 118.651 105.004 98.927 69.093 79.72 69.186 L 79.677 69.186 C 60.469 69.093 40.745 105.004 14.192 131.496 L 0 145.655 L 0 0 L 13.539 11.035 C 39.818 32.455 59.609 63.935 78.747 64.088 L 80.649 64.088 C 99.788 63.935 119.578 32.455 145.857 11.035 L 159.396 0 L 159.396 145.655 Z" fill="rgb(61,22,143)"></path></g><g transform="translate(-2.225 25.695)"><path d="M 147.846 112.155 L 140.818 105.055 C 114.222 78.187 93.951 53.066 73.934 53.164 L 73.563 53.129 C 53.545 53.03 33.623 78.187 7.027 105.055 L 0 112.155 L 0 0 L 6.704 5.533 C 33.02 27.253 53.221 47.906 72.963 48.066 L 74.882 48.066 C 94.624 47.906 114.826 27.253 141.142 5.533 L 147.846 0 L 147.846 112.155 Z" fill="rgb(20,154,251)"></path></g><g transform="translate(2.614 55.035)"><path d="M 138.605 46.61 C 111.56 30.425 90.433 22.452 69.303 22.513 C 48.172 22.452 27.045 30.425 0 46.61 L 0 0 C 26.756 13.081 47.675 19.399 68.32 19.498 L 70.286 19.498 C 90.93 19.399 111.85 13.081 138.605 0 L 138.605 46.61 Z" fill="rgb(161,215,253)"></path></g></g><path fill-rule="evenodd" d="M -80 -80 H 224 V 224 H -80 Z M 72 12 a 72 72 0 1 0 0.01 0 Z" fill="rgb(61,22,143)" filter="url(#bs)"></path>
+</g>
+</g>
+</svg>

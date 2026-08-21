@@ -75,6 +75,33 @@ These are choices, not oversights. Do not "fix" them without reading why.
   in `App.tsx` owns the decision. Do not move it back up to the container to
   save a prop, and keep the `pointerType === 'mouse'` guard: on touch,
   `pointerleave` fires when the finger lifts.
+- **`peaks.json` holds TWO envelopes per clip, at two resolutions, on purpose.**
+  `bars` is 72 buckets, range-stretched per clip with a gamma above 1, because
+  one bar is over a second of speech and raw RMS draws as a flat block. `levels`
+  is 1536 buckets normalized against the clip's peak with a gamma *below* 1,
+  because it drives the orb and a quiet passage has to look quiet. Do not
+  collapse them into one array: the bars want contrast and the orb wants
+  proportion, and either treatment ruins the other consumer. The orb reads its
+  amplitude off the playhead POSITION via `levelAt`, not off the audio output,
+  which is why it also moves while you scrub and why nothing here touches the
+  Web Audio graph. `loadPeaks` rejects a file with no `levelBuckets` outright
+  rather than half-loading a pre-orb one; `pnpm peaks --force` rewrites it and
+  costs nothing but ffmpeg time.
+- **There are 36 voice orbs and 10 colors. That is the source data.** The
+  official orb SVGs are committed at `assets/voice-orbs/`, and reading their
+  fill stacks out gives ten color sets, not thirty-six: Alexis, Marcelo, Sean,
+  Sienna and Tanner are painted the identical orange, Cliff/Conor/Drew/Marcus
+  share a green-and-royal, and so on. `src/lib/voice-orbs.ts` is the only place
+  that collapse is written down, and `assets/voice-orbs/README.md` has the
+  script that re-derives it. Do not "fix" the duplication by inventing 36
+  distinct palettes, and do not read a voice's identity off orb color alone --
+  the orb is `aria-hidden` for exactly that reason. Colors ride on the tile as
+  `data-orb="<n>"`, and `theme.css` maps the number to the semantic
+  `--dg-orb-*` slots, so no component ever names a color. The waveform's
+  `--dg-orb-wave` is hand-picked per family rather than taken from the middle
+  gradient stop: three families' mid tones measure under 2:1 against the panel
+  and vanish. Families 5 and 7 share a mint because it is the only bright stop
+  either one has.
 - **The catalog is not hardcoded, and the endpoint is `/v2/models`.**
   `scripts/generate-clips.ts` asks the API what exists.
   `scripts/fallback-catalog.ts` is a last resort for when that is unreachable,

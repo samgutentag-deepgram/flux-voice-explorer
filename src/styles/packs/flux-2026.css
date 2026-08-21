@@ -74,10 +74,106 @@
      The orb breathes on a 6s cycle when idle. The ambient canvas drifts far
      slower than that. Both are identity, not decoration. */
   --dg-motion-breathe: 6s;
+  /* The speaking pulse. Far faster than the idle breathe on purpose: breathe is
+     ambient identity, this is "audio is coming out of this tile right now" and
+     has to be readable from across the room in a screen capture. */
+  --dg-motion-pulse: 1.05s;
   --dg-motion-fast: 160ms;
   --dg-motion-base: 280ms;
   --dg-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --dg-orb-glow-blur: 8px;
+
+  /* ---- palette: voice orbs ----------------------------------------------
+     Extracted 2026-08-22 from the 36 official orb SVGs, which are committed at
+     `assets/voice-orbs/` so this is checkable rather than remembered.
+
+     TEN families, not 36. The SVGs reuse color sets: Alexis, Marcelo, Sean,
+     Sienna and Tanner are painted the identical orange. Which voice is in
+     which family lives in `src/lib/voice-orbs.ts`; `theme.css` maps a family
+     onto the semantic `--dg-orb-*` slots. Do not add a per-voice token here.
+
+     Each orb is a stack of blurred shapes over a near-black ground: `base`
+     lowest and widest, `mid` above it, `hi` the small blurred highlight, and
+     `glow` a rim light just inside the circle's edge.
+
+     `wave` is chosen, not derived. It tints the played region of the waveform,
+     which is a 2px-tall shape on a near-black panel, so it has to be the
+     brightest stop in the family rather than the middle one -- f6's violet and
+     f5's forest green measure under 2:1 against the panel and disappear. Two
+     families (f5, f7) land on the same mint because their only bright stop is
+     the same color; only one voice is ever audible, so they never sit
+     side by side. */
+  --dg-orb-void: rgb(16, 16, 20);
+
+  /* f1  amber over deep orange, white-hot core. 5 voices. */
+  --dg-orb-f1-base: rgb(227, 90, 4);
+  --dg-orb-f1-mid: rgb(246, 154, 27);
+  --dg-orb-f1-hi: rgb(251, 251, 255);
+  --dg-orb-f1-glow: rgb(227, 90, 4);
+  --dg-orb-f1-wave: rgb(246, 154, 27);
+
+  /* f2  violet into pink with an amber underlight. 3 voices. */
+  --dg-orb-f2-base: rgb(151, 84, 228);
+  --dg-orb-f2-mid: rgb(255, 173, 216);
+  --dg-orb-f2-hi: rgb(246, 154, 27);
+  --dg-orb-f2-glow: rgb(61, 22, 143);
+  --dg-orb-f2-wave: rgb(255, 173, 216);
+
+  /* f3  forest into emerald, pale blue core. 4 voices. */
+  --dg-orb-f3-base: rgb(7, 84, 51);
+  --dg-orb-f3-mid: rgb(18, 183, 106);
+  --dg-orb-f3-hi: rgb(161, 215, 253);
+  --dg-orb-f3-glow: rgb(2, 122, 56);
+  --dg-orb-f3-wave: rgb(18, 183, 106);
+
+  /* f4  royal into azure. Brooke only. */
+  --dg-orb-f4-base: rgb(39, 78, 231);
+  --dg-orb-f4-mid: rgb(29, 157, 251);
+  --dg-orb-f4-hi: rgb(161, 215, 253);
+  --dg-orb-f4-glow: rgb(61, 22, 143);
+  --dg-orb-f4-wave: rgb(29, 157, 251);
+
+  /* f5  forest and royal under mint. 4 voices. */
+  --dg-orb-f5-base: rgb(7, 84, 51);
+  --dg-orb-f5-mid: rgb(39, 78, 231);
+  --dg-orb-f5-hi: rgb(161, 249, 212);
+  --dg-orb-f5-glow: rgb(7, 84, 51);
+  --dg-orb-f5-wave: rgb(161, 249, 212);
+
+  /* f6  deep violet into azure. 4 voices. */
+  --dg-orb-f6-base: rgb(61, 22, 143);
+  --dg-orb-f6-mid: rgb(20, 154, 251);
+  --dg-orb-f6-hi: rgb(161, 215, 253);
+  --dg-orb-f6-glow: rgb(61, 22, 143);
+  --dg-orb-f6-wave: rgb(20, 154, 251);
+
+  /* f7  royal and violet under mint. 5 voices. */
+  --dg-orb-f7-base: rgb(39, 78, 231);
+  --dg-orb-f7-mid: rgb(61, 22, 143);
+  --dg-orb-f7-hi: rgb(161, 249, 212);
+  --dg-orb-f7-glow: rgb(39, 78, 231);
+  --dg-orb-f7-wave: rgb(161, 249, 212);
+
+  /* f8  royal into violet into pink. 5 voices. */
+  --dg-orb-f8-base: rgb(39, 78, 231);
+  --dg-orb-f8-mid: rgb(151, 84, 228);
+  --dg-orb-f8-hi: rgb(255, 173, 216);
+  --dg-orb-f8-glow: rgb(39, 78, 231);
+  --dg-orb-f8-wave: rgb(151, 84, 228);
+
+  /* f9  deep orange into rose. 4 voices. */
+  --dg-orb-f9-base: rgb(227, 90, 4);
+  --dg-orb-f9-mid: rgb(255, 173, 216);
+  --dg-orb-f9-hi: rgb(239, 121, 183);
+  --dg-orb-f9-glow: rgb(227, 90, 4);
+  --dg-orb-f9-wave: rgb(239, 121, 183);
+
+  /* f10  two greens under pale blue. Jack only. */
+  --dg-orb-f10-base: rgb(7, 84, 51);
+  --dg-orb-f10-mid: rgb(2, 122, 56);
+  --dg-orb-f10-hi: rgb(161, 215, 253);
+  --dg-orb-f10-glow: rgb(2, 122, 56);
+  --dg-orb-f10-wave: rgb(161, 215, 253);
 }
 
 /* Both signature motifs must stop when asked. The reference implementation
@@ -85,6 +181,7 @@
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dg-motion-breathe: 0s;
+    --dg-motion-pulse: 0s;
     --dg-motion-fast: 0s;
     --dg-motion-base: 0s;
   }
