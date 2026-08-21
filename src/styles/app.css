@@ -1,0 +1,740 @@
+/* ============================================================================
+   Layout and components. var() only: every literal color, font, and brand
+   radius lives in src/styles/packs/. `make check` enforces that.
+
+   The page is the product surface, so it is full-bleed and only the grid
+   scrolls. Everything else is fixed chrome.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  min-height: 0;
+}
+
+/* --- top bar --------------------------------------------------------------- */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem 0.9rem;
+  border-bottom: 1px solid var(--dg-border);
+  background: var(--dg-bg-panel);
+}
+
+.bar h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  color: var(--dg-text-primary);
+}
+
+.bar-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--dg-text-label);
+}
+
+.bar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.bar-search,
+.bar-select {
+  height: 30px;
+  padding: 0 0.6rem;
+  color: var(--dg-text-body);
+  background: var(--dg-bg-well);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-control);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.bar-search {
+  width: 12rem;
+}
+
+.bar-search::placeholder {
+  color: var(--dg-text-disabled);
+}
+
+.bar-warning {
+  flex: 1 0 100%;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border-left: 2px solid var(--dg-state-error);
+  background: var(--dg-bg-well);
+  border-radius: var(--dg-shape-control);
+  font-size: 0.74rem;
+  color: var(--dg-text-body);
+}
+
+.bar-warning code {
+  font-size: 0.72rem;
+  color: var(--dg-text-primary);
+}
+
+/* --- transport ------------------------------------------------------------- */
+
+.transport {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  row-gap: 0.9rem;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 1.4rem 1.35rem;
+  border-bottom: 1px solid var(--dg-border);
+  background: var(--dg-bg-overlay);
+  backdrop-filter: blur(var(--dg-glass-blur));
+}
+
+.transport-play {
+  width: 34px;
+  height: 34px;
+  color: var(--dg-text-primary);
+  background: var(--dg-bg-well);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-orb);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.transport-play:hover {
+  border-color: var(--dg-border-hover);
+}
+
+.transport-track {
+  position: relative;
+  height: 6px;
+}
+
+.transport-track::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--dg-control-track);
+  border-radius: var(--dg-shape-control);
+}
+
+.transport-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--dg-state-live);
+  border-radius: var(--dg-shape-control);
+  pointer-events: none;
+}
+
+/* The real <input type=range> sits on top, invisible, so keyboard and drag
+   behavior are the platform's rather than reimplemented on a div. */
+.transport-range {
+  position: absolute;
+  inset: -8px 0;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.transport-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.transport-mark {
+  position: absolute;
+  top: 100%;
+  padding: 0.35rem 0 0;
+  color: var(--dg-text-disabled);
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--dg-divider-strong);
+  font: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color var(--dg-anim-fast) var(--dg-anim-ease);
+}
+
+.transport-mark-label {
+  padding-left: 0.3rem;
+}
+
+.transport-mark:hover {
+  color: var(--dg-text-body);
+}
+
+.transport-mark[data-active] {
+  color: var(--dg-state-live);
+  border-left-color: var(--dg-state-live);
+}
+
+.transport-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  min-width: 8rem;
+}
+
+.transport-time {
+  font-family: var(--dg-font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dg-text-primary);
+}
+
+.transport-who {
+  font-size: 0.68rem;
+  color: var(--dg-text-label);
+}
+
+/* --- ticker tape ----------------------------------------------------------- */
+
+/* The script scrolling under a fixed centre marker. Full-bleed and masked at
+   both edges so words arrive and leave rather than popping in at a hard border. */
+.ticker {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--dg-border);
+  background: var(--dg-bg-well);
+}
+
+.ticker-rail {
+  position: relative;
+  height: 2.6rem;
+  cursor: grab;
+  /* The rail owns horizontal pointer gestures, so the browser must not claim
+     them for panning, and a drag must not select the script text. */
+  touch-action: none;
+  user-select: none;
+  /* The mask is what sells the tape. Without it the strip looks like text that
+     happens to be clipped. */
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    var(--dg-surface-page) 12%,
+    var(--dg-surface-page) 88%,
+    transparent
+  );
+}
+
+.ticker-strip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  gap: 0.42rem;
+  align-items: baseline;
+  white-space: nowrap;
+  /* No CSS transition: the transform is rewritten every animation frame, and a
+     transition would fight the interpolation and lag behind the audio. */
+  transform: translateX(0);
+  translate: 0 -50%;
+  will-change: transform;
+}
+
+.ticker-rail:active {
+  cursor: grabbing;
+}
+
+.ticker-word {
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--dg-text-disabled);
+  transition: color var(--dg-anim-fast) var(--dg-anim-ease);
+}
+
+.ticker-word[data-word-active] {
+  color: var(--dg-state-live);
+  font-weight: var(--dg-weight-medium);
+}
+
+/* Fixed marker the words pass under. Sits above the mask so it stays crisp. */
+.ticker-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--dg-state-live);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-word {
+    transition: none;
+  }
+}
+
+/* --- grid, three layouts --------------------------------------------------- */
+
+/* The scroll container. Only this scrolls; the bar, transport, and ticker are
+   fixed chrome. */
+.grid-wrap {
+  padding: 0.9rem 1.4rem 2rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.grid {
+  --grid-gap: 0.6rem;
+  display: grid;
+  gap: var(--grid-gap);
+  align-content: start;
+  /* Explicit column counts, not `auto-fill`. 36 voices divide evenly by 6, 4, 3
+     and 2 but not by 5, so at five across the last row is a ragged 1 and the
+     block stops reading as a grid. auto-fill cannot be told to skip a number,
+     so the counts are named.
+
+     The 6-wide band reaches down to 72rem deliberately: six is the layout this
+     tool is for, so it holds on until tiles would be under ~176px. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 52rem) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 72rem) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.grid-empty {
+  padding: 3rem 0;
+  color: var(--dg-text-label);
+  text-align: center;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  /* Close to 16:9, per the brief. The grid stays responsive; the tile keeps
+     its shape and the text scales down inside it. */
+  aspect-ratio: 16 / 9;
+  padding: 0.6rem 0.7rem;
+  overflow: hidden;
+  color: var(--dg-text-body);
+  text-align: left;
+  background: var(--dg-bg-panel);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-panel);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--dg-anim-fast) var(--dg-anim-ease),
+    transform var(--dg-anim-fast) var(--dg-anim-ease),
+    box-shadow var(--dg-anim-fast) var(--dg-anim-ease);
+}
+
+.tile:hover {
+  border-color: var(--dg-border-hover);
+}
+
+.tile[data-focused] {
+  border-color: var(--dg-state-live);
+  box-shadow: var(--dg-elevation-soft);
+  transform: translateY(-1px);
+}
+
+.tile[data-failed] {
+  border-style: dashed;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The tile's own progress: a hairline that fills only while it is the audible
+   one, so the grid never looks like 36 things are playing at once. */
+.tile-fill {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  transform-origin: left center;
+  background: var(--dg-state-live);
+  transition: opacity var(--dg-anim-fast) var(--dg-anim-ease);
+}
+
+.tile-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 0.5rem;
+  align-items: center;
+}
+
+/* The accent line spans the name column only, so the pace pip keeps its corner. */
+.tile-head .tile-meta {
+  grid-column: 1;
+}
+
+.tile-head .tile-pace {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.tile-name {
+  font-family: var(--dg-font-display);
+  font-size: 1rem;
+  font-weight: var(--dg-weight-medium);
+  color: var(--dg-text-primary);
+}
+
+/* Pace pip: where this voice sits between the fastest and slowest reading of
+   the identical script. The single most useful fact the grid can show, and it
+   only exists because every tile reads the same words. */
+.tile-pace {
+  position: relative;
+  flex: 0 0 34px;
+  height: 3px;
+  background: var(--dg-control-track);
+  border-radius: var(--dg-shape-control);
+}
+
+.tile-pace-pip {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  background: var(--dg-icon-default);
+  border-radius: var(--dg-shape-orb);
+  transform: translateY(-50%);
+}
+
+.tile[data-focused] .tile-pace-pip {
+  background: var(--dg-state-live);
+}
+
+.tile-meta {
+  font-size: 0.72rem;
+  color: var(--dg-text-label);
+}
+
+.tile-chars {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--dg-text-body);
+  overflow: hidden;
+}
+
+/* The waveform takes the slack the description used to hold, which is the empty
+   middle of the tile. Only the focused tile renders one at all. */
+.tile-wave {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  margin: 0.3rem 0 0.15rem;
+  overflow: visible;
+  cursor: pointer;
+}
+
+.tile-wave:hover .tile-wave-base {
+  fill: var(--dg-icon-default);
+}
+
+.tile-wave-base {
+  fill: var(--dg-control-track);
+}
+
+.tile-wave-played {
+  fill: var(--dg-state-live);
+}
+
+.tile-foot {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 0.1rem;
+}
+
+.tile-id {
+  font-family: var(--dg-font-mono);
+  font-size: 0.6rem;
+  color: var(--dg-text-disabled);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-dur {
+  font-family: var(--dg-font-mono);
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dg-text-disabled);
+}
+
+.tile-error {
+  position: absolute;
+  inset: auto 0.7rem 0.5rem;
+  font-size: 0.62rem;
+  color: var(--dg-state-error);
+}
+
+.tile audio {
+  display: none;
+}
+
+/* --- curtain -------------------------------------------------------------- */
+
+/* Browsers need one gesture before audio plays. Rather than a silent failure
+   on first hover, ask for the gesture explicitly. Shown once, not on pause:
+   space-to-pause must not drop a click-blocker over the grid. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--dg-text-body);
+  background: var(--dg-bg-dim);
+  backdrop-filter: blur(var(--dg-glass-blur));
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  z-index: 20;
+}
+
+.curtain-inner {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+  padding: 2rem 3rem;
+  background: var(--dg-bg-panel);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-surface);
+  box-shadow: var(--dg-elevation-panel);
+}
+
+.curtain-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  color: var(--dg-text-on-accent);
+  background: var(--dg-state-live);
+  border-radius: var(--dg-shape-orb);
+  animation: breathe var(--dg-anim-breathe) var(--dg-anim-ease) infinite;
+}
+
+.curtain-keys {
+  font-family: var(--dg-font-mono);
+  font-size: 0.68rem;
+  color: var(--dg-text-disabled);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* --- empty and error states ----------------------------------------------- */
+
+.empty {
+  display: grid;
+  gap: 0.8rem;
+  place-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+
+.empty h1 {
+  margin: 0;
+  color: var(--dg-text-primary);
+}
+
+.empty pre {
+  padding: 0.9rem 1.1rem;
+  color: var(--dg-text-body);
+  background: var(--dg-bg-well);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-panel);
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+/* ===========================================================================
+   MOBILE
+
+   Phone-width is a different job. On a 390px screen a 16:9 tile grid shows
+   about eight voices; the point of this tool is comparing many, so below the
+   breakpoint the same DOM restyles into a dense scrolling list and the tile
+   drops everything that is not name, accent line, or description.
+
+   CSS-only on purpose: no `isMobile` prop, no JS breakpoint listener, no
+   re-render on rotate. The markup is identical at every width.
+   ========================================================================== */
+
+@media (max-width: 40rem) {
+  /* --- top bar: stack, and let the filters take the full width ------------ */
+  .bar {
+    gap: 0.6rem;
+    padding: 0.7rem 0.8rem 0.6rem;
+  }
+
+  .bar-title h1 {
+    font-size: 0.95rem;
+  }
+
+  .bar-sub {
+    font-size: 0.7rem;
+  }
+
+  .bar-controls {
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  .bar-search {
+    flex: 1 1 8rem;
+    width: auto;
+    min-width: 0;
+  }
+
+  .bar-select {
+    flex: 1 1 7rem;
+    min-width: 0;
+  }
+
+  /* --- transport: the readout is the first thing to go ------------------- */
+  .transport {
+    grid-template-columns: auto 1fr;
+    gap: 0.7rem;
+    padding: 0.6rem 0.8rem 1rem;
+  }
+
+  .transport-readout {
+    /* Which second of which voice is desk-sized detail. The ticker below says
+       where you are, and it says it in words. */
+    display: none;
+  }
+
+  /* Five section labels do not fit in 390px, so keep the ticks and drop the
+     text. Tapping a tick still jumps to that section. */
+  .transport-mark-label {
+    display: none;
+  }
+
+  .ticker-rail {
+    height: 2.1rem;
+  }
+
+  .ticker-word {
+    font-size: 0.82rem;
+  }
+
+  /* --- the grid becomes a list ------------------------------------------- */
+  .grid-wrap {
+    padding: 0.5rem 0.8rem 2rem;
+  }
+
+  .grid {
+    /* One column, however wide the phone is. Overrides the 2-column base. */
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .tile {
+    /* The card becomes a row: no fixed ratio, no vertical centring, no lift on
+       press. Two lines of text and 0.9rem of padding is about 48px a voice,
+       which puts ~13 on screen against ~8 as tiles. */
+    aspect-ratio: auto;
+    gap: 0.1rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--dg-shape-control);
+  }
+
+  .tile[data-focused] {
+    transform: none;
+  }
+
+  /* Taps should switch voice immediately. Without these, iOS waits ~300ms for a
+     possible double-tap-to-zoom and paints a grey flash on every tap. */
+  .tile {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tile-head {
+    /* Flex, not the desktop grid: with the pace pip hidden, the name and the
+       accent line share one baseline instead of stacking. */
+    display: flex;
+    gap: 0.45rem;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .tile-meta {
+    /* Shrinks before the name does, and ellipsises rather than wrapping. */
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tile-name {
+    flex: 0 0 auto;
+    font-size: 0.92rem;
+  }
+
+  .tile-chars {
+    flex: 0 0 auto;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Dropped on phones: the pace pip, the model id and the duration. All are
+     comparison tools for a big screen and each costs a line. The waveform is
+     gated in VoiceTile instead, so it does not mount at all here. */
+  .tile-pace,
+  .tile-foot {
+    display: none;
+  }
+}
