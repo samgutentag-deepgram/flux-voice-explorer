@@ -1,0 +1,24 @@
+# Secrets. sample.env is the template and IS tracked.
+.env
+.env.*
+!sample.env
+
+# Dependencies and build output
+node_modules/
+dist/
+dist-server/
+*.tsbuildinfo
+coverage/
+
+# Generated assets. `pnpm clips` writes ~28 MB of audio here, plus the
+# timings.json and peaks.json derived from it. All three are reproducible from
+# the script plus an API key, and none of it belongs in git.
+# NOTE: the Dockerfile copies public/clips from the build context, so
+# `make clips` has to run before `fly deploy`. `make deploy` checks that.
+public/clips/
+
+# Local tool state
+.claude/settings.local.json
+.fly/
+*.log
+.DS_Store

@@ -1,0 +1,140 @@
+/* ============================================================================
+   theme.css, the swap seam.
+
+   Exactly one @import below. That line is the entire rebrand surface.
+   Everything under it maps palette tokens to SEMANTIC tokens, then bridges
+   those onto the token names @deepgram/ui actually reads.
+
+   Components must reference the semantic names in block 1, never the palette
+   names from the pack. Semantic names survive a rebrand; palette names do not.
+   ========================================================================== */
+
+@import "./packs/flux-2026.css";
+
+/* ---------------------------------------------------------------------------
+   1. SEMANTIC LAYER. This is what your components use.
+   -------------------------------------------------------------------------- */
+:root {
+  /* text */
+  --dg-text-primary: var(--dg-ink-primary);
+  --dg-text-body: var(--dg-ink-secondary);
+  --dg-text-label: var(--dg-ink-muted);
+  --dg-text-disabled: var(--dg-ink-faint);
+  --dg-text-on-accent: var(--dg-surface-page);
+
+  /* backgrounds */
+  --dg-bg-app: var(--dg-surface-page);
+  --dg-bg-panel: var(--dg-surface-raised);
+  --dg-bg-overlay: var(--dg-surface-glass);
+  --dg-bg-well: var(--dg-surface-deep);
+  --dg-bg-dim: var(--dg-surface-scrim);
+
+  /* borders */
+  --dg-border: var(--dg-line-hairline);
+  --dg-border-hover: var(--dg-line-hover);
+  --dg-border-selected: var(--dg-line-active);
+
+  /* interactive and state */
+  --dg-focus-ring: var(--dg-accent);
+  --dg-state-live: var(--dg-accent);
+  --dg-state-idle: var(--dg-grey-300);
+  --dg-state-inactive: var(--dg-accent-dim);
+  --dg-state-error: var(--dg-accent-alt);
+  --dg-control-track: var(--dg-grey-500);
+  --dg-control-thumb: var(--dg-grey-100);
+  --dg-icon-default: var(--dg-grey-200);
+  --dg-divider-strong: var(--dg-grey-400);
+
+  /* voice identity slots: assign per voice, do not hardcode at the call site */
+  --dg-voice-1: var(--dg-accent);
+  --dg-voice-2: var(--dg-accent-alt);
+
+  /* geometry, elevation, motion. Semantic names so components never reach
+     into the pack directly. */
+  --dg-shape-control: var(--dg-radius-sm);
+  --dg-shape-panel: var(--dg-radius-md);
+  --dg-shape-surface: var(--dg-radius-lg);
+  --dg-shape-orb: var(--dg-radius-round);
+
+  --dg-elevation-panel: var(--dg-shadow-panel);
+  --dg-elevation-soft: var(--dg-shadow-soft);
+  --dg-glass-blur: var(--dg-blur-glass);
+  --dg-orb-glow: var(--dg-orb-glow-blur);
+
+  --dg-anim-breathe: var(--dg-motion-breathe);
+  --dg-anim-fast: var(--dg-motion-fast);
+  --dg-anim-base: var(--dg-motion-base);
+  --dg-anim-ease: var(--dg-ease);
+
+  /* -------------------------------------------------------------------------
+     2. @deepgram/ui BRIDGE. Required, not optional.
+
+     @deepgram/ui declares its tokens as `--dg-color-x: var(--color-x)`, where
+     `--color-*` are Tailwind v4 theme vars. If you are not running Tailwind,
+     those are undefined and the components render with no colors at all.
+     Setting the --dg-color-* names below is what makes them themed.
+     ---------------------------------------------------------------------- */
+  --dg-color-background: var(--dg-bg-app);
+  --dg-color-foreground: var(--dg-text-body);
+  --dg-color-card: var(--dg-bg-panel);
+  --dg-color-card-foreground: var(--dg-text-primary);
+  --dg-color-popover: var(--dg-bg-overlay);
+  --dg-color-popover-foreground: var(--dg-text-primary);
+  --dg-color-primary: var(--dg-accent);
+  --dg-color-primary-foreground: var(--dg-text-on-accent);
+  --dg-color-secondary: var(--dg-bg-well);
+  --dg-color-secondary-foreground: var(--dg-text-body);
+  --dg-color-accent: var(--dg-accent);
+  --dg-color-accent-foreground: var(--dg-text-on-accent);
+  --dg-color-muted: var(--dg-bg-well);
+  --dg-color-muted-foreground: var(--dg-text-label);
+  --dg-color-destructive: var(--dg-state-error);
+  --dg-color-destructive-foreground: var(--dg-surface-page);
+  --dg-color-border: var(--dg-border);
+  --dg-color-input: var(--dg-border);
+  --dg-color-ring: var(--dg-focus-ring);
+  --dg-font-sans: var(--dg-font-ui);
+  --dg-radius: var(--dg-shape-panel);
+
+  /* Voice-agent widget slots from @deepgram/ui. Sizes are its defaults;
+     restate them so they are visible and tunable in one place. */
+  --dg-va-primary: var(--dg-accent);
+  --dg-va-border: var(--dg-border);
+  --dg-va-fab-size: 56px;
+  --dg-va-padding: 16px;
+  --dg-va-panel-w: min(440px, 100vw);
+}
+
+/* ---------------------------------------------------------------------------
+   3. BASELINE. Everything else belongs in app.css, also var() only.
+   -------------------------------------------------------------------------- */
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--dg-bg-app);
+  color: var(--dg-text-body);
+  font-family: var(--dg-font-ui);
+  font-weight: var(--dg-weight-regular);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--dg-font-display);
+  font-weight: var(--dg-weight-medium);
+}
+
+code,
+pre,
+.dg-telemetry {
+  font-family: var(--dg-font-mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--dg-focus-ring);
+  outline-offset: 2px;
+}

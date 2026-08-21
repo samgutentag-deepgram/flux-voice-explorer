@@ -1,0 +1,33 @@
+[meta]
+title = "Flux Voice Explorer"
+description = "Hover across every Deepgram Flux TTS voice reading the same script, in sync"
+author = "Sam Gutentag <sam.gutentag@deepgram.com>"
+useCase = "flux-tts"
+language = "typescript"
+framework = "react"
+sdk = "none"
+tags = ["flux-tts", "text-to-speech", "react", "typescript"]
+
+[check]
+command = ["make check"]
+message = "Prerequisites checked"
+
+[install]
+command = ["make install"]
+message = "Dependencies installed"
+
+[install.config]
+sample = "sample.env"
+output = ".env"
+
+[start]
+command = ["make start"]
+message = "Running at http://localhost:8080"
+
+[test]
+command = ["make test"]
+message = "Tests passed"
+
+[clean]
+command = ["make clean"]
+message = "Build artifacts cleaned"

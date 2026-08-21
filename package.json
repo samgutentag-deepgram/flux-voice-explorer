@@ -1,0 +1,39 @@
+{
+  "name": "flux-voice-explorer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hover across every Deepgram Flux TTS voice reading the same script, in sync",
+  "license": "MIT",
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "tsx watch src/server/index.ts",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "node dist-server/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clips": "tsx scripts/generate-clips.ts",
+    "align": "tsx scripts/align-clips.ts",
+    "peaks": "tsx scripts/peaks.ts"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.1.0",
+    "tsx": "4.23.12",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vitest": "4.1.11"
+  }
+}

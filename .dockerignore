@@ -1,0 +1,13 @@
+.env
+.env.*
+!sample.env
+.git
+.github
+node_modules
+dist
+dist-server
+tests
+*.md
+!README.md
+docs/
+.DS_Store
