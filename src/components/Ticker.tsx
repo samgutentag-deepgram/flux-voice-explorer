@@ -10,6 +10,12 @@ type Props = {
    * Real STT-aligned timings when available, the syllable estimate otherwise.
    */
   starts: number[]
+  /**
+   * Orb color family of the voice currently speaking, or undefined when nothing
+   * is. Only paints the active word and the playhead marker; see theme.css
+   * block 1b for why it rides as a number rather than a color.
+   */
+  orb: number | undefined
   onSeek: (p: number) => void
   onScrubStart: () => void
   onScrubEnd: () => void
@@ -32,7 +38,7 @@ const DRAG_THRESHOLD = 4
  * a different position in Bree's 142-second reading than in Drew's 84-second
  * one. See word-timeline.ts for where those numbers come from.
  */
-export function Ticker({ progress, starts, onSeek, onScrubStart, onScrubEnd }: Props) {
+export function Ticker({ progress, starts, orb, onSeek, onScrubStart, onScrubEnd }: Props) {
   const railRef = useRef<HTMLDivElement | null>(null)
   const stripRef = useRef<HTMLDivElement | null>(null)
   const spanRefs = useRef<(HTMLSpanElement | null)[]>([])
@@ -216,7 +222,7 @@ export function Ticker({ progress, starts, onSeek, onScrubStart, onScrubEnd }: P
   )
 
   return (
-    <div className="ticker">
+    <div className="ticker" data-orb={orb}>
       <div
         ref={railRef}
         className="ticker-rail"

@@ -66,10 +66,10 @@
   --dg-elevation-panel: var(--dg-shadow-panel);
   --dg-elevation-soft: var(--dg-shadow-soft);
   --dg-glass-blur: var(--dg-blur-glass);
-  --dg-orb-glow: var(--dg-orb-glow-blur);
 
   --dg-anim-breathe: var(--dg-motion-breathe);
   --dg-anim-pulse: var(--dg-motion-pulse);
+  --dg-anim-orb-smooth: var(--dg-motion-orb-smooth);
   --dg-anim-fast: var(--dg-motion-fast);
   --dg-anim-base: var(--dg-motion-base);
   --dg-anim-ease: var(--dg-ease);
@@ -124,31 +124,25 @@
    `src/lib/voice-orbs.ts` owns which voice gets which number, and there is a
    test asserting the two agree in both directions.
 
-   TWO elements carry `data-orb`, and the difference matters:
+   Three elements carry `data-orb`, each for itself and its own subtree:
 
-   - Each `.tile` carries its OWN voice's family, permanently. That is what
-     paints 36 orbs in 36 colors at once.
-   - `.app` carries the CURRENTLY AUDIBLE voice's family, or nothing when the
-     playhead is idle. That is how chrome outside the grid -- the transport
-     fill, the ticker's active word -- picks up the speaker's color, since it
-     is nowhere near the tile in the DOM.
+   - Every `.tile`, with its own voice's family. That is what paints 36 orbs
+     in 36 colors at once.
+   - `.transport` and `.ticker`, with the family of the voice currently
+     SPEAKING, so the progress fill and the active word wear the color of the
+     thing you are hearing.
 
-   Both work because custom properties inherit and an element's own
-   declaration beats the one it inherited, so a tile keeps its own color even
-   while sitting inside an `.app` set to some other voice.
+   An earlier version hung the speaking voice's family on `.app` and let it
+   inherit. That looked cheaper and was worse: it changed five inherited
+   properties across the whole tree on every hover, the ticker's 250 word spans
+   included, and it forced a `[data-orb="0"]` reset so that a tile with no orb
+   of its own would not silently inherit the audible voice's colors. Both
+   components already had, or could take, the one value they needed.
+
+   So an unmapped voice simply omits the attribute and gets the `:root`
+   defaults above -- which is why `orbFamily()` returning `null` is allowed to
+   mean what it says.
    -------------------------------------------------------------------------- */
-
-/* Family 0 is "no orb for this voice". It exists so that an unmapped tile
-   resets to the accent instead of inheriting whatever `.app` is currently set
-   to -- otherwise a voice Deepgram adds tomorrow would render in the color of
-   whichever tile you happened to be hovering. */
-[data-orb="0"] {
-  --dg-orb-base: var(--dg-accent-dim);
-  --dg-orb-mid: var(--dg-accent);
-  --dg-orb-hi: var(--dg-ink-primary);
-  --dg-orb-glow: var(--dg-accent);
-  --dg-orb-wave: var(--dg-accent);
-}
 
 [data-orb="1"] {
   --dg-orb-base: var(--dg-orb-f1-base);

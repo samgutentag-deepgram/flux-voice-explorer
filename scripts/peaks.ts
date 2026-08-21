@@ -35,12 +35,17 @@ const BUCKETS = 72
  * means the orb moves per syllable. Dropping to the 72 the bars use would put
  * one sample every 1.4 seconds and the orb would barely move at all.
  *
- * Measured cost: 191 KB of JSON across 36 voices, 69 KB gzipped. That is about
- * what the JS bundle weighs, so it is not free -- but peaks.json is fetched
- * after first paint and the orb falls back to a fixed pulse until it lands, so
- * it delays nothing, and it is a quarter of a percent of the 28 MB of audio it
- * describes. Halving to 768 buckets would drop it to ~35 KB and put a sample
- * every 110-185ms, which is at or past the length of a syllable.
+ * Measured cost: 191 KB of JSON across 36 voices. It compresses to 69 KB, but
+ * note that nothing currently serves it compressed -- `src/server/index.ts`
+ * uses `express.static` and there is no `compression` middleware -- so 191 KB
+ * is what a browser actually downloads today.
+ *
+ * Affordable anyway: peaks.json is fetched after first paint, the orb falls
+ * back to a fixed pulse until it lands, and it is a quarter of a percent of the
+ * 28 MB of audio it describes. If it ever needs to shrink, base64-encoding
+ * `levels` (already exact 0..255 integers) roughly halves it, and 768 buckets
+ * would halve it again at the cost of a sample every 110-185ms, which is at or
+ * past the length of a syllable.
  */
 const LEVEL_BUCKETS = 1536
 const DECODE_RATE = 8000
@@ -54,16 +59,18 @@ async function decode(clipPath: string): Promise<Int16Array> {
   return new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.length / 2))
 }
 
-/** Perceptual curve applied after the range stretch. Above 1 deepens the dips. */
-const GAMMA = 1.6
-/** Bars never go fully flat, so a quiet stretch still reads as a bar row. */
-const FLOOR = 0.08
-
-/** RMS per bucket, stretched across the clip's own dynamic range. */
-export function bucketRms(samples: Int16Array, buckets: number): number[] {
-  if (samples.length === 0) return new Array(buckets).fill(0)
+/**
+ * Raw RMS per bucket, 0..1, with no normalization at all.
+ *
+ * The windowing is the only thing the two envelopes share, and they must NOT
+ * share what comes after it -- see the two exports below. Keeping the loop here
+ * means an edge case in it (a clip shorter than the bucket count, a final
+ * partial window) gets fixed once.
+ */
+function rmsPerBucket(samples: Int16Array, buckets: number): number[] {
+  const out = new Array<number>(buckets).fill(0)
+  if (samples.length === 0) return out
   const width = samples.length / buckets
-  const out = new Array<number>(buckets)
   for (let b = 0; b < buckets; b += 1) {
     const from = Math.floor(b * width)
     const to = Math.min(Math.floor((b + 1) * width), samples.length)
@@ -74,6 +81,24 @@ export function bucketRms(samples: Int16Array, buckets: number): number[] {
     }
     out[b] = to > from ? Math.sqrt(sum / (to - from)) : 0
   }
+  return out
+}
+
+/** Perceptual curve applied after the range stretch. Above 1 deepens the dips. */
+const GAMMA = 1.6
+/** Bars never go fully flat, so a quiet stretch still reads as a bar row. */
+const FLOOR = 0.08
+
+/**
+ * The drawn waveform: RMS stretched across the clip's own dynamic range.
+ *
+ * The stretch is what makes 72 bars legible when each one averages over a
+ * second of continuous speech -- raw RMS lands between 0.30 and 1.00 and draws
+ * as a flat block.
+ */
+export function bucketRms(samples: Int16Array, buckets: number): number[] {
+  const out = rmsPerBucket(samples, buckets)
+  if (samples.length === 0) return out
   const loudest = Math.max(...out)
   const quietest = Math.min(...out)
   const span = loudest - quietest
@@ -91,7 +116,7 @@ export function bucketRms(samples: Int16Array, buckets: number): number[] {
 const LEVEL_GAMMA = 0.75
 
 /**
- * The orb's envelope: RMS per bucket over the clip's own peak, quantized 0..255.
+ * The orb's envelope: RMS over the clip's own peak, quantized 0..255.
  *
  * Deliberately NOT the range stretch `bucketRms` does. That maps each clip's
  * quietest bucket to zero, which for the orb would mean the softest moment of
@@ -100,22 +125,8 @@ const LEVEL_GAMMA = 0.75
  * full range. Dividing by the peak keeps a quiet passage looking quiet.
  */
 export function bucketLevels(samples: Int16Array, buckets: number): number[] {
-  if (samples.length === 0) return new Array(buckets).fill(0)
-  const width = samples.length / buckets
-  const out = new Array<number>(buckets)
-  let loudest = 0
-  for (let b = 0; b < buckets; b += 1) {
-    const from = Math.floor(b * width)
-    const to = Math.min(Math.floor((b + 1) * width), samples.length)
-    let sum = 0
-    for (let i = from; i < to; i += 1) {
-      const v = samples[i]! / 32768
-      sum += v * v
-    }
-    const rms = to > from ? Math.sqrt(sum / (to - from)) : 0
-    out[b] = rms
-    if (rms > loudest) loudest = rms
-  }
+  const out = rmsPerBucket(samples, buckets)
+  const loudest = Math.max(...out)
   if (loudest <= 0) return out.map(() => 0)
   return out.map((v) => Math.round((v / loudest) ** LEVEL_GAMMA * 255))
 }
@@ -160,6 +171,22 @@ export async function computePeaks(options: {
       failures.push(`${voice.id}: ${(err as Error).message}`)
     }
   })
+
+  // Refuse to write an empty file over a good one.
+  //
+  // `carryForward` returns nothing when the prior file fails the freshness test,
+  // which every pre-orb peaks.json now does. Combine that with per-voice errors
+  // being collected rather than thrown -- no ffmpeg, a bad clip -- and a total
+  // failure would serialize `voices: {}` on top of the previous data. That file
+  // then passes `loadPeaks`, because `{}` is truthy, so the grid would come up
+  // with no waveforms and no reactive orbs and nothing anywhere would say why.
+  if (Object.keys(voices).length === 0) {
+    console.error(
+      `All ${todo.length} clips failed, so peaks.json was left alone:\n  ${failures.join('\n  ')}`,
+    )
+    process.exitCode = 1
+    return
+  }
 
   const json = `${JSON.stringify({
     scriptHash: CLIP_SCRIPT_HASH,

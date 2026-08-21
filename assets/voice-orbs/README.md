@@ -65,6 +65,6 @@ JS
 ```
 
 The `wave` token per family is not produced by that script. It is chosen by
-hand: it tints a 2px shape on a near-black panel, so it has to be the brightest
-stop rather than the middle one. Families 5 and 7 both land on the same mint
-because that is their only bright stop.
+hand against measured contrast, and the rule plus the measurements live in the
+`voice orbs` comment block in `src/styles/packs/flux-2026.css`. Do not restate
+it here -- it was already wrong in this file once.

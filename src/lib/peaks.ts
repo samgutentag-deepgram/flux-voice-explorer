@@ -1,9 +1,11 @@
 /**
- * Waveform data for the focused tile.
+ * Amplitude data for the focused tile: the drawn waveform, and the orb's level.
  *
  * Written by `pnpm peaks`, which decodes the mp3s locally -- no API calls, so it
- * is free to re-run. Only the ACTIVE tile draws its waveform, so this is loaded
- * eagerly (about 6 KB for all 36) but rendered at most once at a time.
+ * is free to re-run. Loaded once for all 36 voices (191 KB, most of it the orb
+ * levels) and read for one voice at a time, since only the audible tile draws
+ * anything. The fetch is off the critical path: the grid renders without it and
+ * the orb falls back to a fixed pulse until it lands.
  */
 
 import { CLIP_SCRIPT_HASH } from './clip-script.ts'
@@ -47,11 +49,17 @@ export async function loadPeaks(): Promise<ClipPeaks | null> {
     // pauses in the wrong places. Absent is better than wrong.
     if (data.scriptHash !== CLIP_SCRIPT_HASH) return null
     if (!data.buckets || !data.voices) return null
-    // A peaks.json from before the orb has no `levels` and its `voices` values
-    // are bare arrays, not `{ bars, levels }`. Rejecting it outright is right:
-    // the alternative is a grid of tiles whose waveforms are `undefined`.
+    // Absent is better than wrong, part two: reject anything whose per-voice
+    // shape is not `{ bars, levels }`. That covers a peaks.json from before the
+    // orb, whose values are bare arrays, and one written by a run where every
+    // clip failed, which has no entries at all. Left in, `voices[id]?.bars` is
+    // `undefined` for all 36 tiles and the symptom is a grid with no waveforms
+    // and nothing in the console. Checking one entry is enough to tell the
+    // shapes apart; this is not validation of every clip.
+    //
     // `pnpm peaks --force` rewrites it, and costs nothing but ffmpeg time.
-    if (!data.levelBuckets) return null
+    const sample = Object.values(data.voices)[0]
+    if (!Array.isArray(sample?.bars) || !Array.isArray(sample?.levels)) return null
     return data
   } catch {
     return null

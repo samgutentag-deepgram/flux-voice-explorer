@@ -136,10 +136,10 @@ body {
   border-radius: var(--dg-shape-control);
 }
 
-/* Takes the speaking voice's color, from `data-orb` on `.app`. Falls back to
-   the accent when nothing is focused, so the bar is green at rest and picks up
-   the voice as you sweep. Only the color transitions: `transform` is written
-   every animation frame by React and must not ease. */
+/* Takes the speaking voice's color, from `data-orb` on `.transport` itself.
+   Falls back to the accent when nothing is focused, so the bar is green at rest
+   and picks up the voice as you sweep. Only the color transitions: `transform`
+   is written every animation frame by React and must not ease. */
 .transport-fill {
   position: absolute;
   inset: 0;
@@ -276,7 +276,7 @@ body {
 }
 
 /* The word under the marker is the one you are hearing, so it wears the voice
-   that is saying it. Same `data-orb` on `.app` as the transport fill. */
+   that is saying it. From `data-orb` on `.ticker`, which takes it as a prop. */
 .ticker-word[data-word-active] {
   color: var(--dg-orb-wave);
   font-weight: var(--dg-weight-medium);
@@ -446,9 +446,12 @@ body {
   /* One knob. The rim light and the pulse are both derived from it, so the
      mobile override below only has to change this line. */
   --orb-size: 36px;
-  /* Amplitude at the current position, 0..1, written by VoiceTile every frame
-     while this tile is the audible one. Declared here so the unfocused 35 have
-     a value and their calc()s resolve. */
+  /* The rim light's blur. The SVG's is 10% of the orb, not a fixed 8px, so it
+     tracks --orb-size and is named once rather than recomputed at three sites. */
+  --orb-rim: calc(var(--orb-size) * 0.11);
+  /* Amplitude at the current position, 0..1. VoiceTile writes this inline while
+     this tile is the audible one and leaves it off otherwise, so this is the
+     resting value for the other 35 -- and the whole value with no JS. */
   --orb-level: 0;
   flex: 0 0 auto;
   width: var(--orb-size);
@@ -480,9 +483,8 @@ body {
     ),
     var(--dg-orb-ground);
   /* The rim light. In the SVG this is a blurred inverse-circle clipped to the
-     orb, which is to say: a glow that reads from inside the edge. Sized off
-     --orb-size because the SVG's blur is 10% of the orb, not a fixed 8px. */
-  box-shadow: inset 0 0 calc(var(--orb-size) * 0.11) var(--dg-orb-glow);
+     orb, which is to say: a glow that reads from inside the edge. */
+  box-shadow: inset 0 0 var(--orb-rim) var(--dg-orb-glow);
   /* Dim until this voice is the audible one. 36 fully-lit orbs would fight the
      empty-middle contrast the grid relies on to show which tile is playing. */
   opacity: 0.35;
@@ -505,36 +507,43 @@ body {
    ---------------------------------------------------------------------------
    `--orb-level` is this clip's own amplitude at the current position, so the
    orb swells on a stressed syllable and drops into a comma. It is the same
-   envelope the waveform bars are drawn from, sampled ~20x finer -- see
-   `levelAt` in src/lib/peaks.ts and LEVEL_BUCKETS in scripts/peaks.ts.
+   amplitude the waveform bars come from, but NOT the same numbers: 21x finer
+   and normalized against the clip's peak instead of range-stretched, so a
+   quiet passage stays quiet here while the bars deliberately gain contrast.
+   See `levelAt` in src/lib/peaks.ts and LEVEL_BUCKETS in scripts/peaks.ts.
 
    Scale, bloom and saturation all move together. Any one alone reads as a
    hover effect; the three together read as output. The bloom is soft on
    purpose: the tile clips it at narrow grid widths, and a soft edge sliding
    under the border is invisible where a hard ring would look broken.
 
-   The 90ms linear transition is the smoothing. Levels land about fourteen a
-   second and this target is rewritten every frame, so re-targeting a short
-   linear transition acts as a low-pass filter -- enough to kill the step
-   between two buckets, too short to lag behind a syllable. Doing the same job
-   in JS would need a ref mutated during render. */
-.tile[data-focused] .tile-orb[data-reactive] {
+   The transition is the smoothing. Levels land about fourteen a second and this
+   target is rewritten every frame, so re-targeting a short linear transition
+   acts as a low-pass filter -- enough to kill the step between two buckets, too
+   short to lag behind a syllable. Doing the same job in JS would need a ref
+   mutated during render. Its duration is a pack token so that reduced motion
+   zeroes it along with everything else. */
+.tile[data-focused]:not([data-failed]) .tile-orb[data-reactive] {
   transform: scale(calc(1 + var(--orb-level) * 0.34));
   box-shadow:
-    inset 0 0 calc(var(--orb-size) * (0.11 + var(--orb-level) * 0.14)) var(--dg-orb-glow),
+    inset 0 0 calc(var(--orb-rim) + var(--orb-size) * var(--orb-level) * 0.14) var(--dg-orb-glow),
     0 0 calc(var(--orb-size) * (0.16 + var(--orb-level) * 0.62))
       color-mix(in srgb, var(--dg-orb-glow) 75%, transparent);
   filter: saturate(calc(1 + var(--orb-level) * 0.55)) brightness(calc(1 + var(--orb-level) * 0.4));
   transition:
-    transform 90ms linear,
-    box-shadow 90ms linear,
-    filter 90ms linear;
+    transform var(--dg-anim-orb-smooth) linear,
+    box-shadow var(--dg-anim-orb-smooth) linear,
+    filter var(--dg-anim-orb-smooth) linear,
+    /* Restated because this shorthand REPLACES the base rule's. Left off, the
+       dim-to-lit step snapped on focus-in while lit-to-dim still faded on
+       focus-out, so sweeping the grid popped in and eased out. */
+    opacity var(--dg-anim-base) var(--dg-anim-ease);
 }
 
 /* No peaks.json yet, so there is no envelope to follow. A fixed pulse is the
    honest fallback: it says "this one is playing" without pretending to track
    audio it cannot see. `pnpm peaks` replaces it with the real thing. */
-.tile[data-focused] .tile-orb:not([data-reactive]) {
+.tile[data-focused]:not([data-failed]) .tile-orb:not([data-reactive]) {
   animation: orb-pulse var(--dg-anim-pulse) var(--dg-anim-ease) infinite;
 }
 
@@ -545,24 +554,30 @@ body {
   }
 }
 
+/* A voice whose clip never loaded is not an identity worth advertising.
+   ---------------------------------------------------------------------------
+   The exclusion lives in the two speaking selectors above, as
+   `:not([data-failed])`, and NOT as louder overrides here. `failed` and
+   `focused` are independent -- hovering a tile focuses it whether or not its
+   clip loaded -- and this rule is three class-equivalents against their four,
+   so it lost on specificity no matter that it comes later. Everything except
+   `opacity` was being ignored: the orb of a 404'd voice sat there swelling and
+   brightening as if it were playing. */
 .tile[data-failed] .tile-orb {
-  /* A voice whose clip never loaded is not an identity worth advertising. */
   opacity: 0.18;
   filter: grayscale(1);
-  animation: none;
-  transform: none;
 }
 
 /* Both the level-driven swell and the fallback pulse are motion, and neither is
    load-bearing -- the orb is still the only lit one on the grid. */
 @media (prefers-reduced-motion: reduce) {
-  .tile[data-focused] .tile-orb[data-reactive],
-  .tile[data-focused] .tile-orb:not([data-reactive]) {
+  .tile[data-focused]:not([data-failed]) .tile-orb[data-reactive],
+  .tile[data-focused]:not([data-failed]) .tile-orb:not([data-reactive]) {
     transform: none;
     filter: none;
     animation: none;
     transition: none;
-    box-shadow: inset 0 0 calc(var(--orb-size) * 0.11) var(--dg-orb-glow);
+    box-shadow: inset 0 0 var(--orb-rim) var(--dg-orb-glow);
   }
 }
 

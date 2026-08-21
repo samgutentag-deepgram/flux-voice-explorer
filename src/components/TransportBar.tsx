@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react'
 import { SECTION_STARTS } from '../lib/clip-script.ts'
+import { orbFamily } from '../lib/voice-orbs.ts'
 import type { Voice } from '../lib/voices.ts'
 
 type Props = {
@@ -69,7 +70,13 @@ export function TransportBar({
   }
 
   return (
-    <div className="transport">
+    /* `data-orb` paints the progress fill in the speaking voice's color. Derived
+       from `focused`, which this component already had -- see theme.css block
+       1b. Absent when nothing is focused, which falls back to the accent. */
+    <div
+      className="transport"
+      data-orb={focused ? orbFamily(focused.id) ?? undefined : undefined}
+    >
       <button
         type="button"
         className="transport-play"

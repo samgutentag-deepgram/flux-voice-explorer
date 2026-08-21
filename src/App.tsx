@@ -279,16 +279,7 @@ export function App() {
   }
 
   return (
-    /**
-     * `data-orb` here is the AUDIBLE voice's color family, and it is how the
-     * chrome outside the grid -- the transport fill, the ticker's active word
-     * -- gets painted in the voice you are hearing. Those live nowhere near a
-     * tile in the DOM, so the family has to ride on a common ancestor and
-     * inherit down. Each tile still carries its own family and overrides this
-     * for itself. Absent while nothing plays, which falls the chrome back to
-     * the accent. See the block-1b comment in theme.css.
-     */
-    <div className="app" data-orb={focusedVoice ? (orbFamily(focusedVoice.id) ?? 0) : undefined}>
+    <div className="app">
       <header className="bar">
         <div className="bar-title">
           <h1>Flux Voice Explorer</h1>
@@ -364,6 +355,12 @@ export function App() {
       <Ticker
         progress={progress}
         starts={canonicalStarts}
+        // The ticker paints its active word in the speaking voice. It is the
+        // only thing here that needs the family and cannot derive it, so it is
+        // a prop rather than an attribute on an ancestor: inheriting it from
+        // `.app` would have changed five custom properties on every node in the
+        // tree, this component's 250 word spans included, on every hover.
+        orb={focusedVoice ? orbFamily(focusedVoice.id) ?? undefined : undefined}
         onSeek={handleSeek}
         onScrubStart={handleScrubStart}
         onScrubEnd={handleScrubEnd}

@@ -84,9 +84,11 @@ These are choices, not oversights. Do not "fix" them without reading why.
   proportion, and either treatment ruins the other consumer. The orb reads its
   amplitude off the playhead POSITION via `levelAt`, not off the audio output,
   which is why it also moves while you scrub and why nothing here touches the
-  Web Audio graph. `loadPeaks` rejects a file with no `levelBuckets` outright
-  rather than half-loading a pre-orb one; `pnpm peaks --force` rewrites it and
-  costs nothing but ffmpeg time.
+  Web Audio graph. `loadPeaks` rejects any file whose per-voice shape is not
+  `{ bars, levels }` rather than half-loading one, and `pnpm peaks` refuses to
+  write an empty `voices` map over good data; `pnpm peaks --force` rewrites it
+  and costs nothing but ffmpeg time. The same unguarded-write shape still exists
+  in `scripts/align-clips.ts`, which has no such refusal.
 - **There are 36 voice orbs and 10 colors. That is the source data.** The
   official orb SVGs are committed at `assets/voice-orbs/`, and reading their
   fill stacks out gives ten color sets, not thirty-six: Alexis, Marcelo, Sean,
@@ -97,11 +99,28 @@ These are choices, not oversights. Do not "fix" them without reading why.
   distinct palettes, and do not read a voice's identity off orb color alone --
   the orb is `aria-hidden` for exactly that reason. Colors ride on the tile as
   `data-orb="<n>"`, and `theme.css` maps the number to the semantic
-  `--dg-orb-*` slots, so no component ever names a color. The waveform's
-  `--dg-orb-wave` is hand-picked per family rather than taken from the middle
-  gradient stop: three families' mid tones measure under 2:1 against the panel
-  and vanish. Families 5 and 7 share a mint because it is the only bright stop
-  either one has.
+  `--dg-orb-*` slots, so no component ever names a color. `data-orb` sits on
+  each tile (its own voice) and on `.transport` and `.ticker` (the voice
+  currently speaking). Do not hoist it to a common ancestor to save the two
+  props: that was the first version, and it changed five inherited properties
+  across the whole tree on every hover, the ticker's 250 word spans included,
+  and it forced a family-0 reset so that an unmapped tile would not inherit the
+  audible voice's colors.
+
+  The waveform's `--dg-orb-wave` is hand-picked per family, not read off a fixed
+  gradient stop: the rule is the most chromatic stop that still clears about 4.5:1
+  against the panel, which lands on `mid` six times and `hi` four times. The
+  pack comment has the measurements. Do not "regularize" it to one slot --
+  the near-white highlights are high-contrast but carry no identity, and the
+  deep violets and forest greens are the reverse at 1.6-2.2:1. Families 5 and
+  7 share a mint because it is the only stop either one has that clears.
+- **Which surfaces follow the voice, and which stay green.** Deliberate, so do
+  not "finish" it either way without asking. Following the voice: the orb, the
+  focused tile's waveform, the transport fill, the ticker's active word and its
+  playhead marker. Staying `--dg-state-live`: the focused tile's border, its 2px
+  progress hairline, the pace pip, and the transport's sentence marks. The split
+  is that the green things report playback state, which belongs to the
+  transport, not to whoever is speaking.
 - **The catalog is not hardcoded, and the endpoint is `/v2/models`.**
   `scripts/generate-clips.ts` asks the API what exists.
   `scripts/fallback-catalog.ts` is a last resort for when that is unreachable,

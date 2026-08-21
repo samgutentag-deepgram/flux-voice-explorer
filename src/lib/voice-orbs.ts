@@ -26,8 +26,11 @@ export const ORB_FAMILY_COUNT = 10
  * Extracted 2026-08-22, from the SVG fill stacks rather than by eye. Two voices
  * are alone in their family (Brooke in 4, Jack in 10); that is real, both orbs
  * carry a color combination nothing else does.
+ *
+ * Exported so the tests can check it against `assets/voice-orbs/` in both
+ * directions. `orbFamily` is what application code should use.
  */
-const FAMILY_BY_VOICE: Readonly<Record<string, number>> = {
+export const ORB_FAMILY_BY_VOICE: Readonly<Record<string, number>> = {
   'flux-alexis-en': 1,
   'flux-marcelo-en': 1,
   'flux-sean-en': 1,
@@ -80,15 +83,13 @@ const FAMILY_BY_VOICE: Readonly<Record<string, number>> = {
  *
  * `null` is a real case, not defensive padding: the catalog comes from the live
  * `/v2/models` list, so a voice Deepgram ships tomorrow will render here before
- * anyone exports its orb. The tile omits `data-orb` in that case and the
- * defaults in `theme.css` paint it in the accent -- a new voice looks
- * deliberately unbranded rather than invisible.
+ * anyone exports its orb.
+ *
+ * Callers leave `data-orb` off the element entirely for it, which falls back to
+ * the `:root` defaults in `theme.css` -- a new voice looks deliberately
+ * unbranded rather than invisible. Nothing above a tile carries `data-orb`, so
+ * there is nothing for an attribute-less element to inherit by mistake.
  */
 export function orbFamily(voiceId: string): number | null {
-  return FAMILY_BY_VOICE[voiceId] ?? null
-}
-
-/** Voice ids we have an orb for. Alphabetical. Used by the tests. */
-export function mappedVoiceIds(): string[] {
-  return Object.keys(FAMILY_BY_VOICE).sort()
+  return ORB_FAMILY_BY_VOICE[voiceId] ?? null
 }

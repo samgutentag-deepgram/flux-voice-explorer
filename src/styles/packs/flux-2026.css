@@ -81,7 +81,12 @@
   --dg-motion-fast: 160ms;
   --dg-motion-base: 280ms;
   --dg-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --dg-orb-glow-blur: 8px;
+  /* How long the orb takes to catch up to a new amplitude. Re-targeted every
+     frame, so it behaves as a low-pass filter on the envelope: long enough to
+     kill the step between two samples, short enough not to lag a syllable.
+     Zeroed under reduced motion with the rest, which is why it lives here
+     rather than as a literal at the call site. */
+  --dg-motion-orb-smooth: 90ms;
 
   /* ---- palette: voice orbs ----------------------------------------------
      Extracted 2026-08-22 from the 36 official orb SVGs, which are committed at
@@ -97,83 +102,96 @@
      `glow` a rim light just inside the circle's edge.
 
      `wave` is chosen, not derived. It tints the played region of the waveform,
-     which is a 2px-tall shape on a near-black panel, so it has to be the
-     brightest stop in the family rather than the middle one -- f6's violet and
-     f5's forest green measure under 2:1 against the panel and disappear. Two
-     families (f5, f7) land on the same mint because their only bright stop is
-     the same color; only one voice is ever audible, so they never sit
-     side by side. */
+     a 2px-tall shape on the panel, so the rule is: the most CHROMATIC stop in
+     the family that still clears about 4.5:1 against the panel. Measured, not
+     eyeballed -- the panel composites to rgb(9,9,14) and the chosen stops run
+     4.5:1 to 16.1:1.
+
+     Both halves of that rule do work. The near-white highlights pass contrast
+     easily and are useless anyway: f1's `hi` is 19.2:1 at a chroma of 0.02,
+     which is to say it is white, and a white waveform identifies nothing. The
+     deep bases and violets are the opposite -- plenty of identity, but f6's
+     base and f7's mid measure 1.6:1 and the three forest greens 2.2:1, and a
+     thin bar in any of them is invisible.
+
+     So `wave` lands on `mid` for six families and `hi` for four. It is NOT
+     simply the brightest stop: f8 takes its purple mid at 4.5:1 over a pink hi
+     at 11.6:1, because the pink is the paler of the two.
+
+     f5 and f7 both end on the same mint, because it is the only stop either
+     one has that clears the bar. Only one voice is ever audible, so the two
+     never appear side by side. */
   --dg-orb-void: rgb(16, 16, 20);
 
   /* f1  amber over deep orange, white-hot core. 5 voices. */
   --dg-orb-f1-base: rgb(227, 90, 4);
   --dg-orb-f1-mid: rgb(246, 154, 27);
   --dg-orb-f1-hi: rgb(251, 251, 255);
-  --dg-orb-f1-glow: rgb(227, 90, 4);
-  --dg-orb-f1-wave: rgb(246, 154, 27);
+  --dg-orb-f1-glow: var(--dg-orb-f1-base);
+  --dg-orb-f1-wave: var(--dg-orb-f1-mid);
 
   /* f2  violet into pink with an amber underlight. 3 voices. */
   --dg-orb-f2-base: rgb(151, 84, 228);
   --dg-orb-f2-mid: rgb(255, 173, 216);
   --dg-orb-f2-hi: rgb(246, 154, 27);
   --dg-orb-f2-glow: rgb(61, 22, 143);
-  --dg-orb-f2-wave: rgb(255, 173, 216);
+  --dg-orb-f2-wave: var(--dg-orb-f2-mid);
 
   /* f3  forest into emerald, pale blue core. 4 voices. */
   --dg-orb-f3-base: rgb(7, 84, 51);
   --dg-orb-f3-mid: rgb(18, 183, 106);
   --dg-orb-f3-hi: rgb(161, 215, 253);
   --dg-orb-f3-glow: rgb(2, 122, 56);
-  --dg-orb-f3-wave: rgb(18, 183, 106);
+  --dg-orb-f3-wave: var(--dg-orb-f3-mid);
 
   /* f4  royal into azure. Brooke only. */
   --dg-orb-f4-base: rgb(39, 78, 231);
   --dg-orb-f4-mid: rgb(29, 157, 251);
   --dg-orb-f4-hi: rgb(161, 215, 253);
   --dg-orb-f4-glow: rgb(61, 22, 143);
-  --dg-orb-f4-wave: rgb(29, 157, 251);
+  --dg-orb-f4-wave: var(--dg-orb-f4-mid);
 
   /* f5  forest and royal under mint. 4 voices. */
   --dg-orb-f5-base: rgb(7, 84, 51);
   --dg-orb-f5-mid: rgb(39, 78, 231);
   --dg-orb-f5-hi: rgb(161, 249, 212);
-  --dg-orb-f5-glow: rgb(7, 84, 51);
-  --dg-orb-f5-wave: rgb(161, 249, 212);
+  --dg-orb-f5-glow: var(--dg-orb-f5-base);
+  --dg-orb-f5-wave: var(--dg-orb-f5-hi);
 
   /* f6  deep violet into azure. 4 voices. */
   --dg-orb-f6-base: rgb(61, 22, 143);
   --dg-orb-f6-mid: rgb(20, 154, 251);
   --dg-orb-f6-hi: rgb(161, 215, 253);
-  --dg-orb-f6-glow: rgb(61, 22, 143);
-  --dg-orb-f6-wave: rgb(20, 154, 251);
+  --dg-orb-f6-glow: var(--dg-orb-f6-base);
+  --dg-orb-f6-wave: var(--dg-orb-f6-mid);
 
   /* f7  royal and violet under mint. 5 voices. */
   --dg-orb-f7-base: rgb(39, 78, 231);
   --dg-orb-f7-mid: rgb(61, 22, 143);
   --dg-orb-f7-hi: rgb(161, 249, 212);
-  --dg-orb-f7-glow: rgb(39, 78, 231);
-  --dg-orb-f7-wave: rgb(161, 249, 212);
+  --dg-orb-f7-glow: var(--dg-orb-f7-base);
+  --dg-orb-f7-wave: var(--dg-orb-f7-hi);
 
   /* f8  royal into violet into pink. 5 voices. */
   --dg-orb-f8-base: rgb(39, 78, 231);
   --dg-orb-f8-mid: rgb(151, 84, 228);
   --dg-orb-f8-hi: rgb(255, 173, 216);
-  --dg-orb-f8-glow: rgb(39, 78, 231);
-  --dg-orb-f8-wave: rgb(151, 84, 228);
+  --dg-orb-f8-glow: var(--dg-orb-f8-base);
+  --dg-orb-f8-wave: var(--dg-orb-f8-mid);
 
   /* f9  deep orange into rose. 4 voices. */
   --dg-orb-f9-base: rgb(227, 90, 4);
   --dg-orb-f9-mid: rgb(255, 173, 216);
   --dg-orb-f9-hi: rgb(239, 121, 183);
-  --dg-orb-f9-glow: rgb(227, 90, 4);
-  --dg-orb-f9-wave: rgb(239, 121, 183);
+  --dg-orb-f9-glow: var(--dg-orb-f9-base);
+  --dg-orb-f9-wave: var(--dg-orb-f9-hi);
 
   /* f10  two greens under pale blue. Jack only. */
   --dg-orb-f10-base: rgb(7, 84, 51);
   --dg-orb-f10-mid: rgb(2, 122, 56);
   --dg-orb-f10-hi: rgb(161, 215, 253);
-  --dg-orb-f10-glow: rgb(2, 122, 56);
-  --dg-orb-f10-wave: rgb(161, 215, 253);
+  --dg-orb-f10-glow: var(--dg-orb-f10-mid);
+  --dg-orb-f10-wave: var(--dg-orb-f10-hi);
 }
 
 /* Both signature motifs must stop when asked. The reference implementation
@@ -182,6 +200,7 @@
   :root {
     --dg-motion-breathe: 0s;
     --dg-motion-pulse: 0s;
+    --dg-motion-orb-smooth: 0s;
     --dg-motion-fast: 0s;
     --dg-motion-base: 0s;
   }

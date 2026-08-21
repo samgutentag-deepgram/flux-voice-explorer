@@ -86,10 +86,14 @@ export const VoiceTile = memo(function VoiceTile({
    * that the mapping from level to scale, glow and saturation stays in
    * app.css next to the rest of the orb.
    *
-   * Rounded for the same reason the clipPath width is: the raw product
-   * stringifies as a 17-digit float into the DOM sixty times a second.
+   * Rounded to two places for the same reason the clipPath width is, and to the
+   * same precision: the raw product stringifies as a 17-digit float into the DOM
+   * sixty times a second, and a hundredth of an orb-radius is invisible.
+   *
+   * `null` while unfocused, so the 35 idle tiles carry no inline style at all
+   * and the `--orb-level: 0` default in app.css is what serves them.
    */
-  const orbLevel = focused ? levelAt(levels, localProgress).toFixed(3) : '0'
+  const orbLevel = focused ? levelAt(levels, localProgress).toFixed(2) : null
 
   // The focused tile re-renders every animation frame, and the bar path is 72
   // segments of string building. It depends only on the clip.
@@ -102,20 +106,17 @@ export const VoiceTile = memo(function VoiceTile({
       chars: voice.characteristics.slice(0, 3).join(', '),
       duration: `${voice.duration.toFixed(1)}s`,
       clipId: `played-${voice.id}`,
-      /**
-       * Orb color family. It rides on the element as a number rather than as
-       * inline custom properties so that the palette stays inside the style
-       * pack -- `theme.css` turns this into colors. See `voice-orbs.ts`.
-       *
-       * `0` when the voice has no orb, and NOT undefined: the attribute has to
-       * be present so the tile resets to the accent. Left off, it would
-       * inherit the audible voice's colors from `data-orb` on `.app` and an
-       * unknown voice would wear whichever tile you were hovering.
-       */
-      orb: orbFamily(voice.id) ?? 0,
     }),
     [voice],
   )
+
+  /**
+   * Orb color family, or undefined for a voice we have no orb for -- which
+   * leaves the attribute off and falls back to the accent defaults in
+   * theme.css. It rides on the element as a number rather than as inline
+   * custom properties so the palette stays inside the style pack.
+   */
+  const orb = orbFamily(voice.id) ?? undefined
 
   useEffect(() => {
     const el = audioRef.current
@@ -138,7 +139,7 @@ export const VoiceTile = memo(function VoiceTile({
       className="tile"
       data-focused={focused || undefined}
       data-failed={failed || undefined}
-      data-orb={text.orb}
+      data-orb={orb}
       onPointerEnter={() => onFocus(voice.id)}
       onPointerLeave={(e) => onFocus(null, e.pointerType === 'mouse')}
       onFocus={() => onFocus(voice.id)}
@@ -166,7 +167,7 @@ export const VoiceTile = memo(function VoiceTile({
           className="tile-orb"
           aria-hidden="true"
           data-reactive={levels ? '' : undefined}
-          style={{ '--orb-level': orbLevel } as CSSProperties}
+          style={orbLevel === null ? undefined : ({ '--orb-level': orbLevel } as CSSProperties)}
         />
         <span className="tile-name">{voice.name}</span>
         <span className="tile-meta">{text.meta}</span>
