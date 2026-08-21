@@ -477,3 +477,60 @@ describe('seekLocal', () => {
     expect(player.getState().progress).toBeCloseTo(0.4, 6)
   })
 })
+
+/**
+ * Hover is the transport: a tile under the pointer plays, no tile under the
+ * pointer pauses. App owns that policy (see `handleFocus`) because `playing` is
+ * only half of it -- a deliberate space-bar pause must survive the next hover.
+ *
+ * It used to hang off `pointerleave` on the grid CONTAINER, which meant the
+ * gutters between tiles did not count as "off a tile": sliding into one ducked
+ * the audio and left the playhead running, so the ticker scrolled on in silence
+ * until you left the grid entirely. The pause moved onto the tiles; these pin
+ * the two player contracts that move leans on.
+ */
+describe('pausing between tiles', () => {
+  it('does not credit the playhead with the time spent paused', () => {
+    // The gap between two tiles is a real pause now, so `play()` has to restart
+    // the tick clock. Without that, the first frame back would carry a dt of
+    // however long the cursor sat in the gutter and jump the script forward.
+    const { player } = makePlayer()
+    player.play()
+    player.focus(null)
+    advance(16)
+    const parked = player.getState().progress
+    player.pause()
+    clock += 2000
+    player.play()
+    advance(16)
+    expect(player.getState().progress).toBeCloseTo(parked + 0.016 / 100, 6)
+  })
+
+  it('starts the incoming tile when play() precedes focus(), the order App uses', async () => {
+    const { player, tiles } = makePlayer()
+    player.seek(CANONICAL[2]!)
+    player.play()
+    player.focus('slow')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // Off the tile: pause, then drop the focus.
+    player.pause()
+    player.focus(null)
+    expect(tiles.slow.pause).toHaveBeenCalled()
+    expect(player.getState().playing).toBe(false)
+
+    // Onto the next tile: resume BEFORE handing over the id, which is what App
+    // does -- so `play()` sees no focus and it is `focus()` that must start the
+    // element. A resume that only started the already-focused track would leave
+    // the ticker gliding with nothing audible behind it.
+    player.play()
+    player.focus('fast')
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(tiles.fast.play).toHaveBeenCalled()
+    // And the crossing kept the word: same script position, fast's own timeline.
+    expect(player.getState().progress).toBeCloseTo(CANONICAL[2]!, 6)
+    expect(tiles.fast.currentTime).toBeCloseTo(FAST[2]! * 80, 4)
+  })
+})

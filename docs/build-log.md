@@ -230,3 +230,36 @@ demo.
 
 **Kept as:** displayed characteristics come from the published wording; the full
 tag list stays searchable but is never printed.
+
+---
+
+## 11. The pause was on the wrong element
+
+Reported after the deploy: hovering a tile plays it, as designed, but sliding the
+mouse *off* a tile leaves the ticker scrolling and the script advancing with no
+audio behind it. Hovering the ticker tape did pause, which was the clue.
+
+The auto-pause was a `pointerleave` on `<main class="grid-wrap">`, the container.
+Inside that element are the gutters between tiles, the grid's own padding, and
+the empty-filter line. None of those are a tile, but all of them are the grid, so
+the pointer moving from a tile into a gap fired the tile's own `pointerleave`
+(which ducks the voice to silence and deliberately keeps the playhead running)
+and nothing else. Reaching the ticker tape finally left the container, which is
+why the one place a user would test it worked.
+
+The container was never the right hook. "Something is audible" is a property of a
+tile, so the pause belongs on the same event that decides which voice plays.
+`VoiceTile` now reports whether a leave came from a mouse, and `handleFocus` in
+`App.tsx` pauses on a mouse leaving a tile and resumes on entering the next one.
+The grid handler is gone.
+
+Two things that had to survive the move. A deliberate space-bar pause must not be
+undone by the next hover, which is what the existing `autoPaused` ref is for.
+And on touch, `pointerleave` fires when the finger lifts, so pausing on it would
+cut every tap short: only a mouse leave pauses, while a tap still picks up an
+auto-pause the mouse left behind.
+
+**Side effect, and an improvement:** crossing a gutter now freezes the playhead
+instead of running it forward in silence. Sweeping the grid slowly used to walk
+the script on by a gap's worth of median pace per crossing. Now you land on the
+word you left.

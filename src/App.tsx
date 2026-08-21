@@ -60,7 +60,7 @@ export function App() {
    * a ref so they do not depend on the player instance.
    */
   /**
-   * True when the pointer leaving the grid paused us, as opposed to the user
+   * True when the pointer leaving a tile paused us, as opposed to the user
    * pausing deliberately. Entering a tile resumes the first kind and must not
    * resume the second, or space-to-pause would be undone by the next hover.
    */
@@ -68,29 +68,32 @@ export function App() {
   /** First voice on screen, so pressing play always makes a sound. */
   const firstVisibleId = useRef<string | null>(null)
 
-  const handleFocus = useCallback((id: string | null) => {
+  /**
+   * Hover IS the transport: a tile under the pointer plays, and the pointer
+   * leaving a tile pauses -- playhead and all, not just ducking to silence.
+   *
+   * The pause hangs off leaving a TILE, deliberately, not off leaving the grid.
+   * It used to be a `pointerleave` on `.grid-wrap`, and the gutters between
+   * tiles, the grid's own padding and the empty-filter line all sit inside that
+   * element -- so sliding off a tile into a gap kept the ticker scrolling on
+   * with nothing behind it, and only leaving the grid entirely would stop it.
+   *
+   * `mayPause` is false when the pointer was not a mouse: on touch,
+   * `pointerleave` fires when the finger lifts, so pausing on it would cut every
+   * tap short. It is deliberately NOT read on the resume side -- a tap should
+   * still pick up an auto-pause the mouse left behind.
+   */
+  const handleFocus = useCallback((id: string | null, mayPause = false) => {
     const player = playerRef.current
     if (!player) return
     if (id && autoPaused.current) {
       autoPaused.current = false
       player.play()
-    }
-    player.focus(id)
-  }, [])
-
-  /**
-   * Leaving the grid pauses, rather than just ducking to silence.
-   *
-   * Mouse only. On touch, `pointerleave` fires when the finger lifts, so this
-   * would pause on every tap.
-   */
-  const handleGridLeave = useCallback((e: React.PointerEvent) => {
-    const player = playerRef.current
-    if (!player || e.pointerType !== 'mouse') return
-    if (player.getState().playing) {
+    } else if (!id && mayPause && player.getState().playing) {
       autoPaused.current = true
       player.pause()
     }
+    player.focus(id)
   }, [])
 
   const handleSeek = useCallback((p: number) => playerRef.current?.seek(p), [])
@@ -356,12 +359,9 @@ export function App() {
         onScrubEnd={handleScrubEnd}
       />
 
-      <main
-        className="grid-wrap"
-        // Leaving the grid pauses. Focus is deliberately NOT cleared, so the
-        // transport keeps naming the voice and resuming plays the same one.
-        onPointerLeave={handleGridLeave}
-      >
+      {/* No pause handler here: leaving a tile is what pauses, and every way
+          out of the grid goes through a tile's own `pointerleave` first. */}
+      <main className="grid-wrap">
         <div className="grid">
           {visible.map((voice: Voice) => (
             <VoiceTile

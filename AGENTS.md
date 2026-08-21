@@ -66,6 +66,15 @@ These are choices, not oversights. Do not "fix" them without reading why.
   header comment in `src/lib/sync-player.ts` before touching it.
 - **Only the focused element plays.** Keeping all ~36 playing and muted was the
   first design; the comment in `sync-player.ts` explains why it buys nothing.
+- **The auto-pause hangs off leaving a TILE, not off leaving the grid.** It was
+  a `pointerleave` on `.grid-wrap` first, and that container also holds the
+  gutters between tiles, the grid's own padding, and the empty-filter line. So
+  sliding off a tile into a gap was not "off a tile": the audio ducked and the
+  playhead kept running, and the ticker scrolled on with nothing behind it until
+  you left the grid entirely. `VoiceTile` now reports the leave and `handleFocus`
+  in `App.tsx` owns the decision. Do not move it back up to the container to
+  save a prop, and keep the `pointerType === 'mouse'` guard: on touch,
+  `pointerleave` fires when the finger lifts.
 - **The catalog is not hardcoded, and the endpoint is `/v2/models`.**
   `scripts/generate-clips.ts` asks the API what exists.
   `scripts/fallback-catalog.ts` is a last resort for when that is unreachable,

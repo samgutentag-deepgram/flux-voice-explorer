@@ -298,9 +298,14 @@ export class SyncPlayer {
   }
 
   /**
-   * The hover handler. `null` means nothing is hovered: we duck to silence but
-   * keep the playhead running, so sweeping the cursor across the grid reads as
-   * one continuous take with the voice swapping under it.
+   * The hover handler. `null` means nothing is hovered: we duck to silence and
+   * leave the playhead running, so a swap from one voice to the next reads as
+   * one continuous take.
+   *
+   * Whether nothing-hovered should also STOP the playhead is policy, and lives
+   * in App next to `handleToggle` -- same reason there is no `toggle()` here.
+   * App pauses on leaving a tile, so in practice a `null` from the grid is
+   * followed by a `pause()`; a `null` from an unmount or a touch lift is not.
    */
   focus(id: string | null): void {
     if (id === this.focusedId) return

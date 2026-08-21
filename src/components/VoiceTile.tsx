@@ -34,7 +34,12 @@ type Props = {
    * attribute every animation frame on a node nobody could see.
    */
   showWave: boolean
-  onFocus: (id: string | null) => void
+  /**
+   * `mayPause` says the pointer leaving may stop the playhead, not just duck
+   * this voice. True for a mouse and for keyboard blur; false for touch, where
+   * `pointerleave` fires on finger-lift and would cut every tap short.
+   */
+  onFocus: (id: string | null, mayPause?: boolean) => void
   /** Seek to a fraction of THIS clip. The player converts it to script position. */
   onSeekLocal: (id: string, fraction: number) => void
 }
@@ -100,9 +105,9 @@ export const VoiceTile = memo(function VoiceTile({
       data-focused={focused || undefined}
       data-failed={failed || undefined}
       onPointerEnter={() => onFocus(voice.id)}
-      onPointerLeave={() => onFocus(null)}
+      onPointerLeave={(e) => onFocus(null, e.pointerType === 'mouse')}
       onFocus={() => onFocus(voice.id)}
-      onBlur={() => onFocus(null)}
+      onBlur={() => onFocus(null, true)}
       aria-label={`${voice.name}, ${voice.accent} ${voice.age}. Hover or focus to hear.`}
     >
       <span

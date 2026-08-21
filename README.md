@@ -110,10 +110,12 @@ length of the drag, because re-seeking a playing element once per pointer move i
 a stutter rather than a scrub.
 
 Pressing play focuses the first voice on screen, so it always makes a sound
-rather than scrolling the script in silence. On a desktop, moving the mouse off
-the grid pauses; moving back onto a tile resumes. That is mouse-only on purpose:
-on touch, `pointerleave` fires when the finger lifts, so it would pause on every
-tap.
+rather than scrolling the script in silence. After that, hover is the transport:
+on a desktop, moving the mouse off a tile pauses, and moving onto another one
+resumes where it left off. Off a tile means off a tile, including the gutters
+between them, so the script never scrolls on without a voice behind it. That is
+mouse-only on purpose: on touch, `pointerleave` fires when the finger lifts, so
+it would cut every tap short.
 
 Hover is the fun path but not an accessible one, so every tile is a real button:
 tabbing to it plays it the same way.
