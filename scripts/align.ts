@@ -3,8 +3,8 @@
  *
  * Why this exists: the ticker needs to know when each word is spoken, and batch
  * `/v2/speak` returns audio and nothing else. The syllable estimate that used to
- * drive the ticker was measured against real timings and is wrong by up to 8.8
- * seconds -- about twenty words -- because it cannot know that Flux reads a line
+ * drive the ticker was measured against real timings and is wrong by up to 8.9
+ * seconds -- 21 words -- because it cannot know that Flux reads a line
  * of acronyms and decimals far slower per syllable than it reads short closing
  * sentences. No amount of retuning the pause constants fixes that; the
  * information is not in the text.
