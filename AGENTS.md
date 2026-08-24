@@ -7,8 +7,29 @@ pre-rendered reading one identical script; the UI puts them on a grid and shares
 one normalized playhead across all of them, so hovering a tile plays that voice
 at the current position in the script.
 
-Read `README.md` for the user-facing story. This file is the parts that a later
-edit is most likely to get wrong.
+Read `README.md` for the user-facing story and how to run it. This file is the
+parts that a later edit is most likely to get wrong.
+
+## How the pieces connect
+
+```
+scripts/generate-clips.ts     GET /v2/models  -> what voices exist right now
+                              POST /v2/speak  -> one clip per voice
+                              writes public/clips/*.mp3 + manifest.json
+
+scripts/align-clips.ts        POST /v1/listen -> real word timings per voice
+                              writes public/clips/timings.json
+
+scripts/peaks.ts              ffmpeg, no API -> waveform envelopes per voice
+                              writes public/clips/peaks.json
+
+src/lib/sync-player.ts        the shared playhead
+src/App.tsx                   grid, filters
+src/server/index.ts           serves dist/ and public/clips/. No secrets.
+```
+
+`public/clips/manifest.json` is the entire contract between the generator and the
+UI. There is no build step joining them, so that JSON *is* the API.
 
 ## Stack, as resolved 2026-08-20
 
@@ -60,10 +81,34 @@ These are choices, not oversights. Do not "fix" them without reading why.
   of the script and behind in the second because Flux reads acronyms and
   decimals far slower per syllable than short sentences, and that is not
   knowable from the text. Run the alignment.
+
+  Alignment is Needleman-Wunsch against the script, not a straight zip, because
+  the token streams do not match: STT spells "429" as "four twenty nine", hears
+  "/v2/speak" as loose words, and occasionally drops one. On this script 96-98% of
+  words match outright and the rest are interpolated between matched neighbours.
+  The mean of the 36 real timelines, used only when nothing is playing, is out by
+  at most 3.1s against any single voice.
 - **The playhead is normalized (0..1 through the script), not seconds.** The
-  clips are different lengths on purpose — same words, different pace — so a
-  seconds-based clock would drift against whatever you are hearing. See the
-  header comment in `src/lib/sync-player.ts` before touching it.
+  clips are different lengths on purpose (same words, different pace), so a
+  seconds-based clock would drift against whatever you are hearing. `progress` is
+  a position on the canonical timeline, the mean of all 36 measured word
+  timelines, and every tile converts it through its own word positions. Hover a
+  new tile mid-sentence and you land on the same WORD.
+
+  The cheap version, seeking the new voice to `progress * itsDuration`, is what
+  this did first and it is wrong in a way you can hear. It assumes two voices
+  spend their time through the script identically, only faster or slower. They do
+  not: each places its own pauses. Handing off from Drew (84s) to Bree (142s)
+  under the old rule landed 8 to 11 words out, and the worst case across all
+  1,260 voice pairs was 17 words. With the per-voice mapping the error is zero by
+  construction. See the header comment in `src/lib/sync-player.ts` before touching
+  it.
+
+  While a voice is audible it owns the clock, read back through its own timeline,
+  so the transport and ticker cannot drift from what you are hearing. The seconds
+  readout is the element's own `currentTime`, deliberately not
+  `progress * duration`, which is only correct for a voice that paces like the
+  average.
 - **Only the focused element plays.** Keeping all ~36 playing and muted was the
   first design; the comment in `sync-player.ts` explains why it buys nothing.
 - **The auto-pause hangs off leaving a TILE, not off leaving the grid.** It was
@@ -180,6 +225,17 @@ Copying only `package.json` and the lockfile fails the image build outright with
 `ERR_PNPM_IGNORED_BUILDS` -- and it fails ONLY in the build stage, because
 esbuild is a devDependency and the `--prod` install never reaches it, so the
 error looks like it comes from nowhere.
+
+## Audio path
+
+The generator asks for raw headerless `linear16` and transcodes to 64 kbit mono
+MP3 with ffmpeg. Two reasons, both load-bearing. `container=none` means the
+response body IS the PCM buffer, so duration is exact arithmetic on the byte
+count instead of a probe, and it sidesteps the batch `container=wav`
+placeholder-header bug (a ~2 GB declared data length). MP3 takes a two-minute
+clip from ~5.8 MB to ~1 MB, which is what makes a 36-tile page loadable at all.
+
+ffmpeg is a generator prerequisite only. The production image has none.
 
 ## Verify
 
