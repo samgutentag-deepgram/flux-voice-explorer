@@ -22,3 +22,8 @@ public/clips/
 .fly/
 *.log
 .DS_Store
+
+# This repo is PUBLIC and its .hub/ is tracked. The archived objectives board is
+# internal planning: launch scheduling, an unblessed metric baseline, a named
+# colleague. It stays on disk and out of the repo. Added 2026-08-26.
+.hub/objectives-archive.md

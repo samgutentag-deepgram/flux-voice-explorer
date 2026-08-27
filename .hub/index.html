@@ -3,8 +3,8 @@
   project-hub template. Canonical chrome: do not restyle, rename, or re-derive.
   Copy verbatim to <repo>/.hub/index.html, then replace only:
     - the <title>, the .eyebrow, the <h1>, the .lede
-    - everything between TILES START/END   (left column)
-    - everything between BOARD START/END   (right column)
+    - everything between TILES START/END       (left column)
+    - everything between BOARD LINK START/END  (Asana banner, omit if absent)
     - the two .stamp lines
   Paths are relative to .hub/, so repo files are ../<path>.
   Never hand-edit the generated file. Change the repo or .hub/hub.yml, regenerate.
@@ -35,7 +35,7 @@
   h1, h2 { font-family: 'Roobert Pro', 'Inter', system-ui, sans-serif; color: var(--heading); letter-spacing: -0.01em; }
   h1 { font-size: 1.8rem; margin: 0 0 0.2rem; }
   h2 { font-size: 1.05rem; margin: 1.8rem 0 0.7rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
-  .cols h2:first-child, .tiles h2:first-child { margin-top: 0; }
+  .tiles h2:first-child { margin-top: 0; }
   .eyebrow { font-family: 'Roobert Pro', 'Inter', sans-serif; font-size: 0.78rem; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--faint); margin: 1.4rem 0 0.4rem; }
   .eyebrow .dg { color: var(--accent); font-weight: 800; }
@@ -45,8 +45,6 @@
     padding: 0.4rem 0.7rem; cursor: pointer; z-index: 21; }
 
   /* Tiles left, board right. Stacks under 62rem so it still reads on a laptop. */
-  .cols { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 2.5rem; align-items: start; }
-  @media (max-width: 62rem) { .cols { grid-template-columns: 1fr; gap: 1.5rem; } }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.7rem; }
   a.tile { display: block; text-decoration: none; color: inherit; background: var(--card-bg);
@@ -66,65 +64,41 @@
      Icons are <use> refs into the sprite at the top of <body>, stroked in currentColor so a
      single set works in both themes. They were character markers ([x], [ ]) until 2026-08-07,
      when "[ ]" turned out to wrap onto two lines inside its 1.4rem box. */
-  .board { background: var(--card-bg); border: 1px solid var(--rule); border-radius: 10px; padding: 0.3rem 0.9rem 0.6rem; }
-  .board details { border-bottom: 1px solid var(--rule); }
-  .board details:last-of-type { border-bottom: 0; }
-  .board summary { cursor: pointer; list-style: none; padding: 0.62rem 0; display: flex; gap: 0.6rem;
     align-items: center; font-size: 0.9rem; }
-  .board summary::-webkit-details-marker { display: none; }
-  .board .ico { width: 15px; height: 15px; flex: none; color: var(--faint); }
-  .board .done > summary .ico,
-  .board .now  > summary .ico { color: var(--accent); }
-  .board .done  > summary { color: var(--done); }
-  .board .now   > summary { font-weight: 600; color: var(--heading); }
-  .board .later > summary { font-style: italic; color: var(--faint); }
-  .board summary .txt { min-width: 0; }
-  .board .now   > summary::after { content: "now"; font-family: 'Roobert Pro', 'Inter', sans-serif;
     font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent);
     border: 1px solid var(--accent); border-radius: 999px; padding: 0.05rem 0.4rem; margin-left: auto; flex: none; }
-  .board .detail { font-size: 0.84rem; color: var(--muted); padding: 0 0 0.7rem 1.6rem; }
-  .board .detail p { margin: 0.3rem 0; }
-  .board .detail code { font-family: 'SF Mono', ui-monospace, Menlo, monospace; font-size: 0.78rem;
     background: var(--code-bg); border-radius: 3px; padding: 0.05em 0.35em; }
   .stamp { color: var(--faint); font-size: 0.78rem; font-family: 'Roobert Pro', 'Inter', sans-serif; margin-top: 0.9rem; }
   .foot { margin-top: 2.5rem; }
-  @media print { #theme-toggle { display: none; } .cols { grid-template-columns: 1fr; } }
+  @media print { #theme-toggle { display: none; } }
+
+  /* Asana banner. Sam keeps the hub open while working, so the board it
+     links has to be reachable without hunting. Sits above the columns. */
+  .board-link { display: block; margin: 1.2rem 0 1.6rem; padding: 0.85rem 1.1rem;
+    border: 2px solid var(--accent); border-radius: 4px; background: var(--card-bg);
+    text-decoration: none; color: var(--text); }
+  .board-link:hover { background: var(--btn-bg); }
+  .board-link .k { font-size: 0.7rem; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; display: block; margin-bottom: 0.15rem; }
+  .board-link .v { font-weight: 600; }
+  .board-link .v::after { content: " \2192"; }
 </style>
 </head>
 <body>
 <!-- Status icon sprite. Same 16x16 footprint so every row aligns; state is distinguishable by
      shape alone: check / play / empty ring / dashed ring. Stroked in currentColor. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="ico-done" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"/>
-      <path d="M5 8.2l2.1 2.1L11 6.4" fill="none" stroke="currentColor" stroke-width="1.6"
-            stroke-linecap="round" stroke-linejoin="round"/>
-    </symbol>
-    <symbol id="ico-now" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"/>
-      <path d="M6.6 5.2l4 2.8-4 2.8z" fill="currentColor"/>
-    </symbol>
-    <symbol id="ico-todo" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"/>
-    </symbol>
-    <symbol id="ico-later" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"
-              stroke-dasharray="2.4 2.2"/>
-    </symbol>
-  </defs>
-</svg>
 <button id="theme-toggle" type="button" aria-label="Toggle dark mode">Light mode</button>
 
 <p class="eyebrow"><span class="dg">deepgram</span> &middot; 36 voices, one playhead &middot; project hub</p>
 <h1>Flux Voice Explorer &middot; Project Hub</h1>
-<p class="lede">Every Deepgram Flux TTS voice reading the same script, on one shared playhead. Built and deployed 2026-08-20 to 21. The campaign takes the hot slot on 2026-08-27, so this board is about advocacy from here, not about the build.</p>
+<p class="lede">Every Deepgram Flux TTS voice reading the same script, on one shared playhead. Built and deployed 2026-08-20 to 21. The campaign takes the hot slot on 2026-08-27, so the board below is about advocacy from here, not about the build.</p>
 
-<div class="cols">
+<!-- BOARD LINK START -->
+
+<!-- BOARD LINK END -->
 
 <div class="tiles">
 <!-- TILES START -->
-
 <h2>Capture</h2>
 <div class="grid">
   <a class="tile" href="ledger.md"><span class="name">&#128211; Build ledger</span><span class="desc">Append-only record. The 2026-08-24 entries are backfilled from the build log and say so; everything after is live.</span> <span class="path">.hub/ledger.md</span></a>
@@ -144,57 +118,14 @@
   <a class="tile local" href="http://localhost:8080"><span class="name">&#128187; Local</span><span class="desc">Only after make install, make clips and make start. Clips are slow and they spend money.</span> <span class="path">localhost:8080</span></a>
 </div>
 
-<h2>Reference: the campaign</h2>
+<h2>Reference: Live</h2>
 <div class="grid">
-  <a class="tile ext" href="https://app.asana.com/0/1217736631077540"><span class="name">&#9989; Small demo push</span><span class="desc">Seven tasks, two closed. Task 4, the grid sweep recording, is ready to shoot.</span> <span class="path">Asana</span></a>
-  <a class="tile" href="../../advocacy-plan/backlog/flux-voice-explorer-dossier.md"><span class="name">&#128203; Intake dossier</span><span class="desc">299 lines. Three angle cards written, all five gate criteria hold on each.</span> <span class="path">advocacy-plan/backlog/</span></a>
+  <a class="tile ext" href="https://dg-devrel-flux-voice-explorer.fly.dev" target="_blank" rel="noopener"><span class="name">🎧 The explorer</span><span class="desc">All 36 voices, one script, one playhead.</span></a>
 </div>
-
 <!-- TILES END -->
 </div>
 
-<div>
-<h2>Objectives</h2>
-<div class="board">
-<!-- BOARD START -->
-
-<details class="done">
-  <summary><svg class="ico"><use href="#ico-done"/></svg><span class="txt">Build the explorer</span></summary>
-  <div class="detail"><p>Fifteen commits, rewritten into build order so the history reads as a tutorial. Grid, transport, ticker tape, waveform, per-voice orbs. The four wrong turns are the interesting part and all four were measured rather than guessed.</p></div>
-</details>
-
-<details class="done">
-  <summary><svg class="ico"><use href="#ico-done"/></svg><span class="txt">Deploy and harden</span></summary>
-  <div class="detail"><p>Live on fly.dev. Two review passes caught twelve issues, four of which would have shipped. The pause bug found after deploy is fixed, and the fix is what makes a slow grid sweep the shot that shows the tool off rather than the one that exposes a bug.</p></div>
-</details>
-
-<details class="now" open>
-  <summary><svg class="ico"><use href="#ico-now"/></svg><span class="txt">Advocacy intake</span></summary>
-  <div class="detail">
-    <p>Day 0 is 2026-08-27, when HN Radio leaves the hot slot. Three angle cards are written and all five gate criteria hold on each, so this starts without an intake day.</p>
-    <p>Three drops, deliberately small: personal post, social thread, one short video. A small demo gets a small push.</p>
-    <p>Next: nothing here until HN Radio records its hot-ended date. The offset is however long hot actually takes, not the nominal ten, and hot has already cost fifteen days.</p>
-  </div>
-</details>
-
-<details class="todo">
-  <summary><svg class="ico"><use href="#ico-todo"/></svg><span class="txt">The three drops</span></summary>
-  <div class="detail"><p>d1 personal post plus the thread, d10 the short video, d30 clips. Seven tasks already exist in Asana, two of them closed.</p></div>
-</details>
-
-<details class="later">
-  <summary><svg class="ico"><use href="#ico-later"/></svg><span class="txt">Day 90 read</span></summary>
-  <div class="detail"><p>2026-11-25. Blocked on the same unblessed baseline as HN Radio, so it can report activity and cannot claim the metric moved. Owner is Chris Hanson, read surface is Superset.</p></div>
-</details>
-
-<!-- BOARD END -->
-</div>
-<p class="stamp">Last update: hub seeded 2026-08-24 and the ledger backfilled from the build log. Next: HN Radio records its hot-ended date, which is what starts this.</p>
-</div>
-
-</div>
-
-<p class="stamp foot">Generated 2026-08-24. Local tiles only resolve on this machine. The assets directory is genuinely empty.</p>
+<p class="stamp foot">Generated 2026-08-26. Pending tiles do not exist yet; local only resolves on this machine.</p>
 
 <script>
   (function () {
