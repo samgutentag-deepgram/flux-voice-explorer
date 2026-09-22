@@ -179,15 +179,22 @@ These are choices, not oversights. Do not "fix" them without reading why.
   `fly deploy`.
 - **`DEEPGRAM_API_KEY` is build-time only.** It appears in `scripts/shared.ts`
   and nowhere else. Not in `src/`, not in the server, not in the bundle.
+- **Voice evaluations are browser-local.** `src/lib/evaluations.ts` owns the
+  storage key and schema. The generated manifest stays a catalog contract and
+  never absorbs user notes or ratings. A static clip cannot measure latency, so
+  the responsiveness rubric says that explicitly rather than manufacturing a
+  per-voice number.
 
 ## Removed on purpose
 
 All of this existed briefly and was cut. It is in git history at commit 4a36813.
 Do not re-add any of it speculatively.
 
-- The sort modal, the age x gender matrix, and the accent-band layout. Two
-  dropdown filters plus a stable A-Z grid do the same job with less UI, so
-  `sortVoices(key, direction)` collapsed to `sortByName`.
+- The old sort modal, age x gender matrix, and accent-band layout. They were
+  removed because they rearranged the catalog without helping a listener keep a
+  shortlist. The customer-driven review workflow now adds compact metadata and
+  listening-state filters plus note/rating sorts. Keep those tied to persisted
+  evaluation state; do not bring back the matrix or a modal of generic sort keys.
 - The volume slider. System volume is the user's control.
 - The live-text panel and its `POST /api/speak` proxy, plus `src/server/wav.ts`
   and `express-rate-limit`. This tool auditions a fixed catalog against a fixed

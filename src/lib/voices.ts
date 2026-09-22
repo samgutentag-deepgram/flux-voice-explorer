@@ -110,6 +110,19 @@ export function sortByName(voices: Voice[]): Voice[] {
   return [...voices].sort((a, b) => a.name.localeCompare(b.name))
 }
 
+export function languageOf(v: Voice): string {
+  const code = v.id.match(/-([a-z]{2})$/i)?.[1]?.toLowerCase()
+  return code === 'en' ? 'English' : code?.toUpperCase() ?? 'Unknown'
+}
+
+export function languageValues(voices: Voice[]): string[] {
+  return [...new Set(voices.map(languageOf))].sort()
+}
+
+export function genderValues(voices: Voice[]): string[] {
+  return [...new Set(voices.map((v) => v.gender).filter(Boolean))].sort()
+}
+
 export function matchesQuery(v: Voice, q: string): boolean {
   const needle = q.trim().toLowerCase()
   if (!needle) return true

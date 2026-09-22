@@ -9,6 +9,9 @@ import {
 } from './lib/word-timeline.ts'
 import {
   accentValues,
+  genderValues,
+  languageOf,
+  languageValues,
   loadManifest,
   matchesQuery,
   medianDuration,
@@ -17,10 +20,13 @@ import {
   type LoadedManifest,
   type Voice,
 } from './lib/voices.ts'
+import { averageRating, evaluationFor, sortByEvaluation, useEvaluations } from './lib/evaluations.ts'
 import { orbFamily } from './lib/voice-orbs.ts'
 import { VoiceTile } from './components/VoiceTile.tsx'
 import { TransportBar } from './components/TransportBar.tsx'
 import { Ticker } from './components/Ticker.tsx'
+import { ListeningGuide } from './components/ListeningGuide.tsx'
+import { ReviewPanel } from './components/ReviewPanel.tsx'
 
 export function App() {
   const [manifest, setManifest] = useState<LoadedManifest | null>(null)
@@ -37,7 +43,13 @@ export function App() {
 
   const [query, setQuery] = useState('')
   const [accentFilter, setAccentFilter] = useState('')
+  const [languageFilter, setLanguageFilter] = useState('')
+  const [genderFilter, setGenderFilter] = useState('')
   const [useCaseFilter, setUseCaseFilter] = useState('')
+  const [heardFilter, setHeardFilter] = useState('')
+  const [sortKey, setSortKey] = useState('name')
+  const [reviewId, setReviewId] = useState<string | null>(null)
+  const { evaluations, update: updateEvaluation, setRating } = useEvaluations()
   // Shown once, to buy the one user gesture browsers require before audio can
   // start. Not tied to `playing`: space-to-pause must not drop a click-blocker
   // back over the grid.
@@ -95,7 +107,8 @@ export function App() {
       player.pause()
     }
     player.focus(id)
-  }, [])
+    if (id) updateEvaluation(id, { heard: true })
+  }, [updateEvaluation])
 
   const handleSeek = useCallback((p: number) => playerRef.current?.seek(p), [])
   const handleSeekLocal = useCallback(
@@ -230,11 +243,20 @@ export function App() {
     const filtered = manifest.voices.filter(
       (v) =>
         matchesQuery(v, query) &&
+        (!languageFilter || languageOf(v) === languageFilter) &&
         (!accentFilter || v.accent === accentFilter) &&
+        (!genderFilter || v.gender === genderFilter) &&
+        (!heardFilter || (heardFilter === 'heard' ? evaluationFor(evaluations, v.id).heard : !evaluationFor(evaluations, v.id).heard)) &&
         (!useCaseFilter || v.useCases.includes(useCaseFilter)),
     )
+    if (sortKey === 'notes') {
+      return sortByEvaluation(filtered, evaluations, 'notes')
+    }
+    if (sortKey === 'rating') {
+      return sortByEvaluation(filtered, evaluations, 'rating')
+    }
     return sortByName(filtered)
-  }, [manifest, query, accentFilter, useCaseFilter])
+  }, [manifest, query, languageFilter, accentFilter, genderFilter, heardFilter, useCaseFilter, sortKey, evaluations])
 
   // Pace rank is computed over the WHOLE catalog, not the filtered view, so the
   // pip means the same thing whatever is on screen.
@@ -252,10 +274,13 @@ export function App() {
   )
   const focusedVoice = (focusedId && byId.get(focusedId)) || null
   const accents = useMemo(() => accentValues(manifest?.voices ?? []), [manifest])
+  const languages = useMemo(() => languageValues(manifest?.voices ?? []), [manifest])
+  const genders = useMemo(() => genderValues(manifest?.voices ?? []), [manifest])
   const useCases = useMemo(() => useCaseValues(manifest?.voices ?? []), [manifest])
   // Read in startPlayback, which must not depend on render order.
   firstVisibleId.current = visible[0]?.id ?? null
   const failedSet = useMemo(() => new Set(failed), [failed])
+  const reviewVoice = reviewId ? byId.get(reviewId) ?? null : null
 
   if (loadError) {
     return (
@@ -293,11 +318,17 @@ export function App() {
           <input
             ref={searchRef}
             className="bar-search"
+            data-testid="voice-search"
             type="search"
             placeholder="Filter  /"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+
+          <select className="bar-select" value={languageFilter} onChange={(e) => setLanguageFilter(e.target.value)} aria-label="Filter by language">
+            <option value="">All languages</option>
+            {languages.map((language) => <option key={language} value={language}>{language}</option>)}
+          </select>
 
           <select
             className="bar-select"
@@ -313,6 +344,11 @@ export function App() {
             ))}
           </select>
 
+          <select className="bar-select" value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)} aria-label="Filter by gender">
+            <option value="">All genders</option>
+            {genders.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
+          </select>
+
           <select
             className="bar-select"
             value={useCaseFilter}
@@ -325,6 +361,18 @@ export function App() {
                 {u}
               </option>
             ))}
+          </select>
+
+          <select className="bar-select" value={heardFilter} onChange={(e) => setHeardFilter(e.target.value)} aria-label="Filter by listening status">
+            <option value="">All listening states</option>
+            <option value="unheard">Not heard yet</option>
+            <option value="heard">Already heard</option>
+          </select>
+
+          <select className="bar-select" value={sortKey} onChange={(e) => setSortKey(e.target.value)} aria-label="Sort voices">
+            <option value="name">Sort: name</option>
+            <option value="notes">Sort: notes A–Z</option>
+            <option value="rating">Sort: rating high–low</option>
           </select>
 
         </div>
@@ -369,8 +417,12 @@ export function App() {
       {/* No pause handler here: leaving a tile is what pauses, and every way
           out of the grid goes through a tile's own `pointerleave` first. */}
       <main className="grid-wrap">
+        <ListeningGuide />
+        <div className="voice-workspace" data-review-open={reviewVoice ? '' : undefined}>
         <div className="grid">
-          {visible.map((voice: Voice) => (
+          {visible.map((voice: Voice) => {
+            const evaluation = evaluationFor(evaluations, voice.id)
+            return (
             <VoiceTile
               key={voice.id}
               voice={voice}
@@ -389,10 +441,25 @@ export function App() {
               peaks={peaks?.voices[voice.id]?.bars ?? null}
               levels={peaks?.voices[voice.id]?.levels ?? null}
               showWave={wideEnoughForWave}
+              heard={evaluation.heard}
+              hasNotes={Boolean(evaluation.notes.trim())}
+              rating={averageRating(evaluation)}
               onFocus={handleFocus}
               onSeekLocal={handleSeekLocal}
+              onReview={setReviewId}
             />
-          ))}
+            )
+          })}
+        </div>
+        {reviewVoice && (
+          <ReviewPanel
+            voice={reviewVoice}
+            evaluation={evaluationFor(evaluations, reviewVoice.id)}
+            onChange={(patch) => updateEvaluation(reviewVoice.id, patch)}
+            onRating={(key, score) => setRating(reviewVoice.id, key, score)}
+            onClose={() => setReviewId(null)}
+          />
+        )}
         </div>
         {visible.length === 0 && <p className="grid-empty">Nothing matches those filters.</p>}
       </main>

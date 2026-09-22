@@ -310,6 +310,144 @@ body {
   min-height: 0;
 }
 
+.listening-guide {
+  margin-bottom: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  color: var(--dg-text-body);
+  background: var(--dg-bg-panel);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-panel);
+}
+
+.listening-guide summary {
+  color: var(--dg-text-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  padding-top: 0.8rem;
+}
+
+.guide-grid h2,
+.review-panel h2,
+.review-panel h3 {
+  margin: 0;
+  color: var(--dg-text-primary);
+}
+
+.guide-grid h2 { font-size: 0.82rem; }
+.guide-grid p { margin: 0.45rem 0 0; font-size: 0.72rem; line-height: 1.45; }
+.guide-grid code { color: var(--dg-text-primary); }
+
+.voice-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.voice-workspace[data-review-open] {
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+}
+
+.review-panel {
+  position: sticky;
+  top: 0;
+  padding: 1rem;
+  color: var(--dg-text-body);
+  background: var(--dg-bg-panel);
+  border: 1px solid var(--dg-border-hover);
+  border-radius: var(--dg-shape-panel);
+  box-shadow: var(--dg-elevation-soft);
+}
+
+.review-head,
+.rubric-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.review-head h2 { font-size: 1.1rem; }
+.review-head p,
+.review-help,
+.review-storage { margin: 0.2rem 0 0; color: var(--dg-text-label); font-size: 0.7rem; }
+.review-kicker { color: var(--dg-state-live); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.review-close {
+  color: var(--dg-text-label);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.heard-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 1rem 0;
+  font-size: 0.78rem;
+}
+
+.rubric-head { align-items: baseline; }
+.rubric-head h3 { font-size: 0.82rem; }
+.rubric-head span { color: var(--dg-state-live); font-family: var(--dg-font-mono); font-size: 0.7rem; }
+.rubric-list { display: grid; gap: 0.65rem; margin-top: 0.8rem; }
+
+.rubric-row {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rubric-row legend { margin-bottom: 0.3rem; color: var(--dg-text-primary); font-size: 0.72rem; }
+.rubric-row small { display: block; margin-top: 0.3rem; color: var(--dg-text-disabled); font-size: 0.62rem; line-height: 1.35; }
+.score-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.25rem; }
+
+.score-buttons button {
+  padding: 0.3rem;
+  color: var(--dg-text-label);
+  background: var(--dg-bg-well);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-control);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.score-buttons button[data-selected] {
+  color: var(--dg-surface-page);
+  background: var(--dg-state-live);
+  border-color: var(--dg-state-live);
+}
+
+.notes-field {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  color: var(--dg-text-primary);
+  font-size: 0.72rem;
+}
+
+.notes-field textarea {
+  min-height: 6rem;
+  padding: 0.6rem;
+  resize: vertical;
+  color: var(--dg-text-body);
+  background: var(--dg-bg-well);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-control);
+  font: inherit;
+  font-size: 0.74rem;
+}
+
 .grid {
   --grid-gap: 0.6rem;
   display: grid;
@@ -340,6 +478,13 @@ body {
 @media (min-width: 72rem) {
   .grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  /* The review panel removes a quarter of the available canvas. Keep the
+     comparison cards readable instead of letting the viewport-wide six-column
+     breakpoint squeeze them into narrow slivers. */
+  .voice-workspace[data-review-open] .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -678,6 +823,22 @@ body {
   color: var(--dg-text-disabled);
 }
 
+.tile-status {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.tile-status span {
+  padding: 0.08rem 0.28rem;
+  color: var(--dg-state-live);
+  background: var(--dg-bg-well);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-control);
+  font-size: 0.55rem;
+  line-height: 1.2;
+}
+
 .tile-error {
   position: absolute;
   inset: auto 0.7rem 0.5rem;
@@ -848,10 +1009,24 @@ body {
     padding: 0.5rem 0.8rem 2rem;
   }
 
+  .guide-grid,
+  .voice-workspace[data-review-open] {
+    grid-template-columns: 1fr;
+  }
+
+  .review-panel {
+    position: relative;
+    grid-row: 1;
+  }
+
   .grid {
     /* One column, however wide the phone is. Overrides the 2-column base. */
     grid-template-columns: 1fr;
     gap: 0.35rem;
+  }
+
+  .voice-workspace[data-review-open] .grid {
+    grid-template-columns: 1fr;
   }
 
   .tile {

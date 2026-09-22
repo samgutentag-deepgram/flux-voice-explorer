@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { CLIP_SCRIPT_HASH } from '../src/lib/clip-script.ts'
 import {
   loadManifest,
+  genderValues,
+  languageOf,
+  languageValues,
   matchesQuery,
   medianDuration,
   sortByName,
@@ -118,6 +121,18 @@ describe('useCaseValues', () => {
 
   it('drops empties rather than rendering a blank filter option', () => {
     expect(useCaseValues([voice({ id: 'a', useCases: ['', 'IVR'] })])).toEqual(['IVR'])
+  })
+})
+
+describe('catalog filter values', () => {
+  it('derives the language from the model suffix without changing the manifest contract', () => {
+    expect(languageOf(voice({ id: 'flux-bree-en' }))).toBe('English')
+    expect(languageOf(voice({ id: 'flux-luz-es' }))).toBe('ES')
+    expect(languageValues([voice({ id: 'flux-bree-en' }), voice({ id: 'flux-kit-en' })])).toEqual(['English'])
+  })
+
+  it('dedupes gender values for the filter', () => {
+    expect(genderValues([voice({ id: 'a', gender: 'F' }), voice({ id: 'b', gender: 'M' }), voice({ id: 'c', gender: 'F' })])).toEqual(['F', 'M'])
   })
 })
 

@@ -41,6 +41,9 @@ type Props = {
    * attribute every animation frame on a node nobody could see.
    */
   showWave: boolean
+  heard: boolean
+  hasNotes: boolean
+  rating: number | null
   /**
    * `mayPause` says the pointer leaving may stop the playhead, not just duck
    * this voice. True for a mouse and for keyboard blur; false for touch, where
@@ -49,6 +52,7 @@ type Props = {
   onFocus: (id: string | null, mayPause?: boolean) => void
   /** Seek to a fraction of THIS clip. The player converts it to script position. */
   onSeekLocal: (id: string, fraction: number) => void
+  onReview: (id: string) => void
 }
 
 /**
@@ -71,8 +75,12 @@ export const VoiceTile = memo(function VoiceTile({
   peaks,
   levels,
   showWave,
+  heard,
+  hasNotes,
+  rating,
   onFocus,
   onSeekLocal,
+  onReview,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -137,6 +145,7 @@ export const VoiceTile = memo(function VoiceTile({
     <button
       type="button"
       className="tile"
+      data-testid={`voice-tile-${voice.id}`}
       data-focused={focused || undefined}
       data-failed={failed || undefined}
       data-orb={orb}
@@ -144,6 +153,7 @@ export const VoiceTile = memo(function VoiceTile({
       onPointerLeave={(e) => onFocus(null, e.pointerType === 'mouse')}
       onFocus={() => onFocus(voice.id)}
       onBlur={() => onFocus(null, true)}
+      onClick={() => onReview(voice.id)}
       aria-label={`${voice.name}, ${voice.accent} ${voice.age}. Hover or focus to hear.`}
     >
       <span
@@ -214,6 +224,11 @@ export const VoiceTile = memo(function VoiceTile({
 
       <span className="tile-foot">
         <code className="tile-id">{voice.id}</code>
+        <span className="tile-status" aria-label="Review status">
+          {heard && <span title="Heard">heard</span>}
+          {hasNotes && <span title="Has notes">notes</span>}
+          {rating !== null && <span title="Average score">{rating.toFixed(1)}</span>}
+        </span>
         <span className="tile-dur">{text.duration}</span>
       </span>
 

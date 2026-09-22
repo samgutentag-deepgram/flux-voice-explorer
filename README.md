@@ -48,6 +48,17 @@ Every tile is one voice reading the identical script, so the only variable is th
 voice. Hover a tile and you hear that voice at the current position. Move to the
 next tile and the voice changes under a playhead that never stopped.
 
+Click a tile to open its review panel. The explorer remembers, in this browser,
+which voices you have heard, your notes, and 1–5 ratings for responsiveness,
+intelligibility, naturalness, expressivity and prosody, and voice fit. The
+responsiveness row is for a separate live test: pre-rendered clips cannot measure
+time to first audio. Use the listening guide above the grid for the vocabulary
+behind each dimension.
+
+The top bar filters by language, accent, gender, published use case, and whether
+you have already heard a voice. It can sort by name, your note text, or your
+average rating. Notes never leave the browser.
+
 Same words everywhere also makes pace measurable. The seconds figure on each tile
 is how long that voice takes to get through the script. Bree needs 142.2s, Drew
 needs 84.2s, and the grid sorts by it.
@@ -84,6 +95,18 @@ README in that folder has the script that re-derives the grouping.
 | `←` `→` | ±5s of the audible voice |
 | `shift` `←` `→` | ±30s |
 | `/` | focus the filter |
+
+## Synthesis controls and telephony
+
+The current grid compares each voice at its tuned default. Flux `expressivity`
+is a beta integer from `-2` (calm) through `0` (the production-tuned default) to
+`2` (animated), while `speed` controls pace separately. Those controls are not
+shown as fake browser effects: this explorer is static, so a setting must have a
+real pre-rendered clip before it can be auditioned.
+
+For telephony, the relevant quality setting is an **8 kHz sample rate** with
+mu-law or A-law encoding, not an 8 kbit bitrate. The bounded variant plan is
+tracked in [issue 2](https://github.com/Jacob-Lasky/flux-voice-explorer/issues/2).
 
 Drag the ticker tape to scrub, or tap a word to jump straight to it. Click the
 waveform to jump to that point in the clip.
