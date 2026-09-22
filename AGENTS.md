@@ -14,7 +14,7 @@ parts that a later edit is most likely to get wrong.
 
 ```
 scripts/generate-clips.ts     GET /v2/models  -> what voices exist right now
-                              POST /v2/speak  -> one clip per voice
+                              POST /v2/speak  -> one clip, or a 3x2 profile matrix
                               writes public/clips/*.mp3 + manifest.json
 
 scripts/align-clips.ts        POST /v1/listen -> real word timings per voice
@@ -184,6 +184,13 @@ These are choices, not oversights. Do not "fix" them without reading why.
   never absorbs user notes or ratings. A static clip cannot measure latency, so
   the responsiveness rubric says that explicitly rather than manufacturing a
   per-voice number.
+- **Profile controls switch real assets.** `pnpm clips -- --profiles` renders
+  calm/default/animated (`expressivity=-2/0/2`) at studio 24 kHz linear16 and
+  telephony 8 kHz mu-law. The latter is transcoded from the API's raw mu-law to
+  browser-playable MP3; never synthesize at 24 kHz and imitate telephony with a
+  browser filter. Timing and peak keys use `<voice-id>:<profile-id>` so switching
+  variants keeps word-exact handoffs. Manifests without `variants` remain valid
+  and intentionally hide the controls.
 
 ## Removed on purpose
 
@@ -235,10 +242,11 @@ error looks like it comes from nowhere.
 
 ## Audio path
 
-The generator asks for raw headerless `linear16` and transcodes to 64 kbit mono
-MP3 with ffmpeg. Two reasons, both load-bearing. `container=none` means the
-response body IS the PCM buffer, so duration is exact arithmetic on the byte
-count instead of a probe, and it sidesteps the batch `container=wav`
+The generator asks for raw headerless audio and transcodes to 64 kbit mono MP3
+with ffmpeg. The default/studio path is `linear16`; telephony profiles are real
+8 kHz `mulaw`. `container=none` means the response body IS the sample buffer, so
+duration is exact arithmetic on the byte count instead of a probe (two bytes per
+linear16 sample, one per mu-law sample), and it sidesteps the batch `container=wav`
 placeholder-header bug (a ~2 GB declared data length). MP3 takes a two-minute
 clip from ~5.8 MB to ~1 MB, which is what makes a 36-tile page loadable at all.
 

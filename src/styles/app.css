@@ -57,6 +57,31 @@ body {
   align-items: center;
 }
 
+.profile-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-shape-control);
+}
+
+.profile-controls legend {
+  padding: 0 0.25rem;
+  color: var(--dg-text-label);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-note {
+  max-width: 8rem;
+  color: var(--dg-text-label);
+  font-size: 0.66rem;
+  line-height: 1.2;
+}
+
 .bar-search,
 .bar-select {
   height: 30px;

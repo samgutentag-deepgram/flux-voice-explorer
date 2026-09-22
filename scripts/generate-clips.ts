@@ -32,14 +32,22 @@ import { alignClips } from './align-clips.ts'
 import { computePeaks } from './peaks.ts'
 import { CLIPS_DIR, CONCURRENCY, loadKey, mapLimit, readJson, runFfmpeg } from './shared.ts'
 import type { Manifest, Voice } from '../src/lib/voices.ts'
+import { mergeRenderedCatalog, preserveVariants } from './profile-manifest.ts'
+import {
+  DEFAULT_AUDIO_PROFILE,
+  EXPRESSIVITY_LEVELS,
+  OUTPUT_PROFILES,
+  audioProfileId,
+  trackKey,
+  type AudioProfileId,
+} from '../src/lib/audio-profiles.ts'
 
 const SAMPLE_RATE = 24_000
-const ENCODING = 'linear16'
 const MP3_BITRATE = '64k'
 const MODELS_ENDPOINT = '/v2/models'
 const MAX_RETRIES = 4
 
-type Args = { force: boolean; list: boolean; only: string[] }
+type Args = { force: boolean; list: boolean; only: string[]; profiles: boolean }
 
 /** Accepts `--only a,b` and `--only=a,b`, which is the whole grammar. */
 function parseArgs(argv: string[]): Args {
@@ -51,6 +59,7 @@ function parseArgs(argv: string[]): Args {
   return {
     force: argv.includes('--force'),
     list: argv.includes('--list'),
+    profiles: argv.includes('--profiles'),
     only: raw.startsWith('-') ? [] : raw.split(',').map((s) => s.trim()).filter(Boolean),
   }
 }
@@ -160,12 +169,34 @@ function reportCatalogDrift(catalog: Catalog): void {
 
 // --- render ----------------------------------------------------------------
 
-async function speak(voiceId: string, key: string, host: string): Promise<Buffer> {
+type RenderProfile = {
+  id: AudioProfileId
+  expressivity: -2 | 0 | 2
+  sampleRate: number
+  encoding: 'linear16' | 'mulaw'
+}
+
+export const RENDER_PROFILES: RenderProfile[] = EXPRESSIVITY_LEVELS.flatMap((expression) =>
+  OUTPUT_PROFILES.map((output) => ({
+    id: audioProfileId(expression.id, output.id),
+    expressivity: expression.value,
+    sampleRate: output.sampleRate,
+    encoding: output.encoding,
+  })),
+)
+
+async function speak(
+  voiceId: string,
+  key: string,
+  host: string,
+  profile: RenderProfile,
+): Promise<Buffer> {
   const query = new URLSearchParams({
     model: voiceId,
-    encoding: ENCODING,
+    encoding: profile.encoding,
     container: 'none',
-    sample_rate: String(SAMPLE_RATE),
+    sample_rate: String(profile.sampleRate),
+    expressivity: String(profile.expressivity),
   })
   let lastError = ''
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
@@ -195,13 +226,14 @@ async function speak(voiceId: string, key: string, host: string): Promise<Buffer
   throw new Error(`${voiceId}: ${lastError}`)
 }
 
-async function toMp3(pcm: Buffer, outPath: string): Promise<void> {
+async function toMp3(audio: Buffer, outPath: string, profile: RenderProfile): Promise<void> {
   await runFfmpeg(
     [
-      '-y', '-f', 's16le', '-ar', String(SAMPLE_RATE), '-ac', '1', '-i', 'pipe:0',
+      '-y', '-f', profile.encoding === 'mulaw' ? 'mulaw' : 's16le',
+      '-ar', String(profile.sampleRate), '-ac', '1', '-i', 'pipe:0',
       '-codec:a', 'libmp3lame', '-b:a', MP3_BITRATE, outPath,
     ],
-    pcm,
+    audio,
   )
 }
 
@@ -240,32 +272,64 @@ async function main(): Promise<void> {
 
   await mkdir(CLIPS_DIR, { recursive: true })
   const existing = new Set(await readdir(CLIPS_DIR).catch(() => []))
+  const manifestPath = path.join(CLIPS_DIR, 'manifest.json')
+  const existingManifest = await readJson<Manifest>(manifestPath)
+  const priorVoices = existingManifest?.scriptHash === scriptHash ? existingManifest.voices : []
+  const priorById = new Map(priorVoices.map((voice) => [voice.id, voice]))
 
   let done = 0
   const failures: string[] = []
+  const renderedTracks: Voice[] = []
   const rendered = await mapLimit(wanted, CONCURRENCY, async (voice) => {
-    const file = `${voice.id}.mp3`
-    const outPath = path.join(CLIPS_DIR, file)
-    const cached = !args.force && existing.has(file)
+    const profiles = args.profiles
+      ? RENDER_PROFILES
+      : RENDER_PROFILES.filter((profile) => profile.id === DEFAULT_AUDIO_PROFILE)
 
     try {
-      let durationSeconds: number
-      if (cached) {
-        durationSeconds = await mp3DurationFromSidecar(outPath)
-      } else {
-        const pcm = await speak(voice.id, key, host)
-        // 16-bit mono: two bytes per sample.
-        durationSeconds = pcm.length / 2 / SAMPLE_RATE
-        await toMp3(pcm, outPath)
-        await writeFile(`${outPath}.json`, JSON.stringify({ durationSeconds }))
+      const variants: NonNullable<Voice['variants']> = {}
+      const completedTracks: Voice[] = []
+      for (const profile of profiles) {
+        const file = args.profiles
+          ? `${voice.id}--${profile.id}.mp3`
+          : `${voice.id}.mp3`
+        const outPath = path.join(CLIPS_DIR, file)
+        const cached = !args.force && existing.has(file)
+        let durationSeconds: number
+        if (cached) {
+          durationSeconds = await mp3DurationFromSidecar(outPath)
+        } else {
+          const audio = await speak(voice.id, key, host, profile)
+          const bytesPerSample = profile.encoding === 'mulaw' ? 1 : 2
+          durationSeconds = audio.length / bytesPerSample / profile.sampleRate
+          await toMp3(audio, outPath, profile)
+          await writeFile(`${outPath}.json`, JSON.stringify({ durationSeconds }))
+        }
+        const { size } = await stat(outPath)
+        const variant = {
+          clip: `/clips/${file}`,
+          duration: durationSeconds,
+          bytes: size,
+          sampleRate: profile.sampleRate,
+          encoding: profile.encoding,
+          expressivity: profile.expressivity,
+        } as const
+        variants[profile.id] = variant
+        completedTracks.push({
+          ...voice,
+          id: trackKey(voice.id, profile.id),
+          ...variant,
+        })
+        console.log(
+          `  ${cached ? 'cached' : 'rendered'} ${voice.id.padEnd(22)} ` +
+            `${profile.id.padEnd(18)} ${durationSeconds.toFixed(1)}s ${(size / 1024).toFixed(0)}KB`,
+        )
       }
-      const { size } = await stat(outPath)
+      const base = variants[DEFAULT_AUDIO_PROFILE]!
+      renderedTracks.push(...completedTracks)
       done += 1
-      console.log(
-        `  [${String(done).padStart(2)}/${wanted.length}] ${cached ? 'cached' : 'rendered'} ` +
-          `${voice.id.padEnd(22)} ${durationSeconds.toFixed(1)}s ${(size / 1024).toFixed(0)}KB`,
-      )
-      return { ...voice, clip: `/clips/${file}`, duration: durationSeconds, bytes: size } as Voice
+      console.log(`  [${String(done).padStart(2)}/${wanted.length}] completed ${voice.id}`)
+      const next = { ...voice, ...base, variants: args.profiles ? variants : undefined } as Voice
+      return preserveVariants(next, priorById.get(voice.id))
     } catch (err) {
       failures.push(`${voice.id}: ${(err as Error).message}`)
       console.error(`  [--/${wanted.length}] FAILED ${voice.id}: ${(err as Error).message}`)
@@ -273,7 +337,16 @@ async function main(): Promise<void> {
     }
   })
 
-  const voices = rendered.filter((v): v is Voice => v !== null)
+  const completedVoices = rendered.filter((v): v is Voice => v !== null)
+  if (completedVoices.length === 0 && priorVoices.length === 0) {
+    throw new Error('No clips rendered; preserving any prior manifest instead of writing an empty catalog.')
+  }
+  const voices = mergeRenderedCatalog(
+    priorVoices,
+    completedVoices,
+    wanted.map((voice) => voice.id),
+    args.only.length > 0,
+  )
   const manifest: Manifest = {
     generatedAt: new Date().toISOString(),
     scriptHash,
@@ -285,22 +358,15 @@ async function main(): Promise<void> {
     voices,
   }
 
-  // A partial run must not clobber a good manifest with a shorter one.
-  const manifestPath = path.join(CLIPS_DIR, 'manifest.json')
-  if (args.only.length) {
-    const prior = await readJson<Manifest>(manifestPath)
-    // Only merge rows that belong to the SAME script. A stale manifest merged
-    // with new voices would mix two scripts in one file.
-    if (prior && prior.scriptHash === scriptHash) {
-      const merged = new Map(prior.voices.map((v) => [v.id, v]))
-      for (const v of voices) merged.set(v.id, v)
-      manifest.voices = [...merged.values()].sort((a, b) => a.id.localeCompare(b.id))
-    }
-  }
-
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
 
-  const totalMb = manifest.voices.reduce((n, v) => n + v.bytes, 0) / 1024 / 1024
+  const totalBytes = manifest.voices.reduce(
+    (sum, voice) => sum + (voice.variants
+      ? Object.values(voice.variants).reduce((variantSum, variant) => variantSum + (variant?.bytes ?? 0), 0)
+      : voice.bytes),
+    0,
+  )
+  const totalMb = totalBytes / 1024 / 1024
   const durations = manifest.voices.map((v) => v.duration)
   console.log(
     `\n${manifest.voices.length} voices in manifest.json, ${totalMb.toFixed(1)} MB total\n` +
@@ -321,7 +387,9 @@ async function main(): Promise<void> {
   // `--force` meant `--only bree` re-rendered one clip and then spent 35
   // unnecessary STT calls re-aligning everything else. Both chained steps get
   // the same subset, so they agree on what this run covered.
-  const renderedThisRun = args.only.length ? voices : manifest.voices
+  const renderedThisRun = args.profiles
+    ? renderedTracks
+    : completedVoices
   await alignClips({ voices: renderedThisRun, force: args.force, key, host })
 
   // Local, free, and required by the waveform on the focused tile.

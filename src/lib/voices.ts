@@ -1,4 +1,14 @@
 import { CLIP_SCRIPT_HASH } from './clip-script.ts'
+import { AUDIO_PROFILE_IDS, type AudioProfileId } from './audio-profiles.ts'
+
+export type VoiceVariant = {
+  clip: string
+  duration: number
+  bytes: number
+  sampleRate: number
+  encoding: 'linear16' | 'mulaw'
+  expressivity: -2 | 0 | 2
+}
 
 /**
  * The voice manifest. `public/clips/manifest.json` is written by
@@ -40,6 +50,19 @@ export type Voice = {
   /** Measured seconds. Differs per voice: same words, different pace. */
   duration: number
   bytes: number
+  /** Optional real synthesis matrix. Older one-clip manifests remain valid. */
+  variants?: Partial<Record<AudioProfileId, VoiceVariant>>
+}
+
+export function voiceForProfile(voice: Voice, profileId: AudioProfileId): Voice {
+  const variant = voice.variants?.[profileId]
+  return variant ? { ...voice, ...variant } : voice
+}
+
+export function hasAudioProfiles(voices: Voice[]): boolean {
+  return voices.length > 0 && voices.every((voice) =>
+    AUDIO_PROFILE_IDS.every((profileId) => Boolean(voice.variants?.[profileId])),
+  )
 }
 
 export type Manifest = {

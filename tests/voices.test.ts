@@ -9,8 +9,11 @@ import {
   medianDuration,
   sortByName,
   useCaseValues,
+  hasAudioProfiles,
+  voiceForProfile,
   type Voice,
 } from '../src/lib/voices.ts'
+import { AUDIO_PROFILE_IDS, audioProfileId } from '../src/lib/audio-profiles.ts'
 
 function voice(partial: Partial<Voice> & { id: string }): Voice {
   return {
@@ -45,6 +48,43 @@ describe('medianDuration', () => {
   it('is not thrown off by one very slow voice, which is why it is not the mean', () => {
     const set = [95, 100, 105, 400].map((d, i) => voice({ id: `v${i}`, duration: d }))
     expect(medianDuration(set)).toBe(102.5)
+  })
+})
+
+describe('audio profiles', () => {
+  const telephony = audioProfileId('animated', 'telephony')
+  const profiled = voice({
+    id: 'flux-bree-en',
+    variants: {
+      [telephony]: {
+        clip: '/clips/flux-bree-en--animated-telephony.mp3',
+        duration: 92,
+        bytes: 8000,
+        sampleRate: 8000,
+        encoding: 'mulaw',
+        expressivity: 2,
+      },
+    },
+  })
+
+  it('selects a real rendered asset and its measured duration', () => {
+    const selected = voiceForProfile(profiled, telephony)
+    expect(selected.clip).toContain('animated-telephony')
+    expect(selected.duration).toBe(92)
+  })
+
+  it('falls back to the legacy clip when a profile is missing', () => {
+    expect(voiceForProfile(profiled, audioProfileId('calm', 'studio')).clip).toBe(profiled.clip)
+  })
+
+  it('only exposes controls when the manifest contains variants', () => {
+    const complete = voice({
+      id: 'complete',
+      variants: Object.fromEntries(AUDIO_PROFILE_IDS.map((id) => [id, profiled.variants![telephony]])),
+    })
+    expect(hasAudioProfiles([complete])).toBe(true)
+    expect(hasAudioProfiles([profiled])).toBe(false)
+    expect(hasAudioProfiles([voice({ id: 'legacy' })])).toBe(false)
   })
 })
 

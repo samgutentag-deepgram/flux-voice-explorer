@@ -98,15 +98,18 @@ README in that folder has the script that re-derives the grouping.
 
 ## Synthesis controls and telephony
 
-The current grid compares each voice at its tuned default. Flux `expressivity`
-is a beta integer from `-2` (calm) through `0` (the production-tuned default) to
-`2` (animated), while `speed` controls pace separately. Those controls are not
-shown as fake browser effects: this explorer is static, so a setting must have a
-real pre-rendered clip before it can be auditioned.
+Render the optional audition matrix with `pnpm clips -- --profiles`. The top bar
+then compares three real Flux expressivity settings — calm (`-2`), tuned default
+(`0`), and animated (`2`) — against studio 24 kHz linear PCM and telephony 8 kHz
+mu-law source audio. That is six synthesized clips per voice, not a browser
+playback effect. Nonzero expressivity is beta and should be re-checked when the
+model changes.
 
-For telephony, the relevant quality setting is an **8 kHz sample rate** with
-mu-law or A-law encoding, not an 8 kbit bitrate. The bounded variant plan is
-tracked in [issue 2](https://github.com/Jacob-Lasky/flux-voice-explorer/issues/2).
+The 8 kHz mu-law response is converted to MP3 only so browsers can play it; its
+narrowband telephony character is preserved. “8 kHz” is a sample rate, not an
+8 kbit bitrate. Pace remains the measured duration shown on each tile instead
+of becoming another matrix axis: Flux `speed` and expressivity are different
+synthesis controls, and multiplying both would make the audition set unwieldy.
 
 Drag the ticker tape to scrub, or tap a word to jump straight to it. Click the
 waveform to jump to that point in the clip.
@@ -124,6 +127,7 @@ pnpm clips                     # render anything missing, then align and analyze
 pnpm clips -- --force          # re-render everything
 pnpm clips -- --only kit,bree  # substring match on the voice id
 pnpm clips -- --list           # print the live catalog, render nothing
+pnpm clips -- --profiles       # six real expression/output clips per voice
 
 pnpm align                     # re-align without re-rendering
 pnpm peaks                     # waveform data. Local ffmpeg, no API calls, free

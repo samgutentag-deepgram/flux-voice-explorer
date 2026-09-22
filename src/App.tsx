@@ -13,13 +13,24 @@ import {
   languageOf,
   languageValues,
   loadManifest,
+  hasAudioProfiles,
   matchesQuery,
   medianDuration,
   sortByName,
   useCaseValues,
   type LoadedManifest,
   type Voice,
+  voiceForProfile,
 } from './lib/voices.ts'
+import {
+  DEFAULT_AUDIO_PROFILE,
+  EXPRESSIVITY_LEVELS,
+  OUTPUT_PROFILES,
+  audioProfileId,
+  analysisKey,
+  type ExpressivityId,
+  type OutputProfileId,
+} from './lib/audio-profiles.ts'
 import { averageRating, evaluationFor, sortByEvaluation, useEvaluations } from './lib/evaluations.ts'
 import { orbFamily } from './lib/voice-orbs.ts'
 import { VoiceTile } from './components/VoiceTile.tsx'
@@ -48,6 +59,8 @@ export function App() {
   const [useCaseFilter, setUseCaseFilter] = useState('')
   const [heardFilter, setHeardFilter] = useState('')
   const [sortKey, setSortKey] = useState('name')
+  const [expressivity, setExpressivity] = useState<ExpressivityId>('default')
+  const [outputProfile, setOutputProfile] = useState<OutputProfileId>('studio')
   const [reviewId, setReviewId] = useState<string | null>(null)
   const { evaluations, update: updateEvaluation, setRating } = useEvaluations()
   // Shown once, to buy the one user gesture browsers require before audio can
@@ -65,6 +78,8 @@ export function App() {
 
   const searchRef = useRef<HTMLInputElement | null>(null)
   const playerRef = useRef<SyncPlayer | null>(null)
+  const retainedProgress = useRef(0)
+  const pendingProfileState = useRef<{ focusedId: string | null; playing: boolean } | null>(null)
 
   /**
    * Stable handlers. Inline arrows here were a new identity on every render,
@@ -163,13 +178,19 @@ export function App() {
   /** Timeline for when no single voice is speaking. */
   const canonicalStarts = useMemo(() => meanStarts(timings, ESTIMATED_STARTS), [timings])
 
-  const reference = useMemo(() => (manifest ? medianDuration(manifest.voices) : 0), [manifest])
+  const profileId = audioProfileId(expressivity, outputProfile)
+  const profileVoices = useMemo(
+    () => manifest?.voices.map((voice) => voiceForProfile(voice, profileId)) ?? [],
+    [manifest, profileId],
+  )
+  const reference = useMemo(() => medianDuration(profileVoices), [profileVoices])
 
   const player = useMemo(() => {
     if (!manifest) return null
-    return new SyncPlayer({
+    const next = new SyncPlayer({
       referenceDuration: reference,
       onUpdate: (state) => {
+        retainedProgress.current = state.progress
         setProgress(state.progress)
         setLocalProgress(state.localProgress)
         setElapsed(Math.floor(state.elapsed))
@@ -182,6 +203,8 @@ export function App() {
         )
       },
     })
+    next.seek(retainedProgress.current)
+    return next
   }, [manifest, reference])
 
   useEffect(() => {
@@ -191,6 +214,22 @@ export function App() {
       playerRef.current = null
     }
   }, [player])
+
+  useEffect(() => {
+    const pending = pendingProfileState.current
+    if (!player || !pending) return
+    pendingProfileState.current = null
+    if (pending.focusedId) player.focus(pending.focusedId)
+    if (pending.playing) player.play()
+  }, [player, profileId])
+
+  const changeProfile = useCallback((change: () => void) => {
+    const current = playerRef.current?.getState()
+    pendingProfileState.current = current
+      ? { focusedId: current.focusedId, playing: current.playing }
+      : null
+    change()
+  }, [])
 
   // The canonical timeline is the coordinate system `progress` lives in, so the
   // player needs it before any per-voice conversion can happen.
@@ -249,28 +288,29 @@ export function App() {
         (!heardFilter || (heardFilter === 'heard' ? evaluationFor(evaluations, v.id).heard : !evaluationFor(evaluations, v.id).heard)) &&
         (!useCaseFilter || v.useCases.includes(useCaseFilter)),
     )
+    const profiled = filtered.map((voice) => voiceForProfile(voice, profileId))
     if (sortKey === 'notes') {
-      return sortByEvaluation(filtered, evaluations, 'notes')
+      return sortByEvaluation(profiled, evaluations, 'notes')
     }
     if (sortKey === 'rating') {
-      return sortByEvaluation(filtered, evaluations, 'rating')
+      return sortByEvaluation(profiled, evaluations, 'rating')
     }
-    return sortByName(filtered)
-  }, [manifest, query, languageFilter, accentFilter, genderFilter, heardFilter, useCaseFilter, sortKey, evaluations])
+    return sortByName(profiled)
+  }, [manifest, profileId, query, languageFilter, accentFilter, genderFilter, heardFilter, useCaseFilter, sortKey, evaluations])
 
   // Pace rank is computed over the WHOLE catalog, not the filtered view, so the
   // pip means the same thing whatever is on screen.
   const paceRanks = useMemo(() => {
     if (!manifest) return new Map<string, number>()
-    const durations = manifest.voices.map((v) => v.duration)
+    const durations = profileVoices.map((v) => v.duration)
     const min = Math.min(...durations)
     const span = Math.max(...durations) - min || 1
-    return new Map(manifest.voices.map((v) => [v.id, (v.duration - min) / span]))
-  }, [manifest])
+    return new Map(profileVoices.map((v) => [v.id, (v.duration - min) / span]))
+  }, [manifest, profileVoices])
 
   const byId = useMemo(
-    () => new Map((manifest?.voices ?? []).map((v) => [v.id, v])),
-    [manifest],
+    () => new Map(profileVoices.map((v) => [v.id, v])),
+    [profileVoices],
   )
   const focusedVoice = (focusedId && byId.get(focusedId)) || null
   const accents = useMemo(() => accentValues(manifest?.voices ?? []), [manifest])
@@ -315,6 +355,38 @@ export function App() {
         </div>
 
         <div className="bar-controls">
+          {hasAudioProfiles(manifest.voices) && (
+            <fieldset className="profile-controls" data-testid="audio-profile-controls">
+              <legend>Audition profile</legend>
+              <select
+                className="bar-select"
+                aria-label="Expressivity"
+                value={expressivity}
+                onChange={(event) => changeProfile(() => setExpressivity(event.target.value as ExpressivityId))}
+              >
+                {EXPRESSIVITY_LEVELS.map((level) => (
+                  <option key={level.id} value={level.id}>{level.label}</option>
+                ))}
+              </select>
+              <select
+                className="bar-select"
+                aria-label="Output quality"
+                value={outputProfile}
+                onChange={(event) => changeProfile(() => setOutputProfile(event.target.value as OutputProfileId))}
+              >
+                {OUTPUT_PROFILES.map((output) => (
+                  <option key={output.id} value={output.id}>{output.label}</option>
+                ))}
+              </select>
+              <span className="profile-note">
+                {profileId === DEFAULT_AUDIO_PROFILE
+                  ? 'Production-tuned expression'
+                  : expressivity === 'default'
+                    ? 'Production-tuned expression'
+                    : 'Beta expressivity setting'}
+              </span>
+            </fieldset>
+          )}
           <input
             ref={searchRef}
             className="bar-search"
@@ -422,9 +494,11 @@ export function App() {
         <div className="grid">
           {visible.map((voice: Voice) => {
             const evaluation = evaluationFor(evaluations, voice.id)
+            const hasSelectedVariant = Boolean(voice.variants?.[profileId])
+            const selectedAnalysisKey = analysisKey(voice.id, profileId, hasSelectedVariant)
             return (
             <VoiceTile
-              key={voice.id}
+              key={`${voice.id}:${profileId}`}
               voice={voice}
               player={player}
               focused={focusedId === voice.id}
@@ -437,9 +511,9 @@ export function App() {
               // A voice with no alignment gets the canonical timeline, so the
               // conversion is the identity and it behaves as the average voice.
               // There is deliberately no "no timeline" state to special-case.
-              starts={timings?.voices[voice.id] ?? canonicalStarts}
-              peaks={peaks?.voices[voice.id]?.bars ?? null}
-              levels={peaks?.voices[voice.id]?.levels ?? null}
+              starts={timings?.voices[selectedAnalysisKey] ?? canonicalStarts}
+              peaks={peaks?.voices[selectedAnalysisKey]?.bars ?? null}
+              levels={peaks?.voices[selectedAnalysisKey]?.levels ?? null}
               showWave={wideEnoughForWave}
               heard={evaluation.heard}
               hasNotes={Boolean(evaluation.notes.trim())}
