@@ -25,8 +25,14 @@ export function evaluationFor(all: Evaluations, id: string): VoiceEvaluation {
   return all[id] ?? EMPTY
 }
 
+/**
+ * Responsiveness is a live-test score, so it is recorded but kept out of the
+ * average. A guess made against a pre-rendered clip would otherwise move the sort.
+ */
+const AVERAGED_KEYS = RUBRIC.map(({ key }) => key).filter((key) => key !== 'latency')
+
 export function averageRating(value: VoiceEvaluation): number | null {
-  const scores = Object.values(value.ratings).filter(
+  const scores = AVERAGED_KEYS.map((key) => value.ratings[key]).filter(
     (score): score is number => typeof score === 'number',
   )
   return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null
@@ -48,6 +54,31 @@ export function sortByEvaluation(
     if (Boolean(leftNotes) !== Boolean(rightNotes)) return leftNotes ? -1 : 1
     return leftNotes.localeCompare(rightNotes) || a.name.localeCompare(b.name)
   })
+}
+
+/** Audible seconds on one voice before it counts as heard. */
+export const HEARD_AFTER_SECONDS = 3
+
+export type ListenTracker = { id: string | null; elapsed: number; listened: number; marked: boolean }
+export const IDLE_LISTEN: ListenTracker = { id: null, elapsed: 0, listened: 0, marked: false }
+
+/**
+ * Advance the focused voice's audible time from one player update. Hovering or
+ * tabbing across a tile focuses it without playing it, so focus alone is not
+ * "heard". Only forward steps under a second count, which drops seeks and the
+ * jump a handoff makes into a new voice's timeline.
+ */
+export function trackListening(
+  prev: ListenTracker,
+  sample: { focusedId: string | null; playing: boolean; elapsed: number },
+): ListenTracker {
+  if (!sample.focusedId) return IDLE_LISTEN
+  if (sample.focusedId !== prev.id) {
+    return { id: sample.focusedId, elapsed: sample.elapsed, listened: 0, marked: false }
+  }
+  const step = sample.elapsed - prev.elapsed
+  const counts = sample.playing && step > 0 && step < 1
+  return { ...prev, elapsed: sample.elapsed, listened: counts ? prev.listened + step : prev.listened }
 }
 
 export function parseEvaluations(raw: string | null): Evaluations {

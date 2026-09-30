@@ -183,7 +183,10 @@ These are choices, not oversights. Do not "fix" them without reading why.
   storage key and schema. The generated manifest stays a catalog contract and
   never absorbs user notes or ratings. A static clip cannot measure latency, so
   the responsiveness rubric says that explicitly rather than manufacturing a
-  per-voice number.
+  per-voice number. "Heard" means about 3s of audible playback on that voice
+  (`trackListening`), not focus: hovering or tabbing across a tile focuses it
+  without playing it. The tile never opens the review panel, because a tap is
+  the audition gesture on touch; the Review button in the tile's cell does.
 - **Profile controls switch real assets.** `pnpm clips -- --profiles` renders
   calm/default/animated (`expressivity=-2/0/2`) at studio 24 kHz linear16 and
   telephony 8 kHz mu-law. The latter is transcoded from the API's raw mu-law to

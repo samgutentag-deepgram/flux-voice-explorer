@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { RUBRIC, averageRating, type VoiceEvaluation, type RubricKey } from '../lib/evaluations.ts'
 import type { Voice } from '../lib/voices.ts'
 
@@ -11,8 +12,14 @@ type Props = {
 
 export function ReviewPanel({ voice, evaluation, onChange, onRating, onClose }: Props) {
   const average = averageRating(evaluation)
+  const panelRef = useRef<HTMLElement | null>(null)
+  // On a phone the panel stacks above the list, so it opens off-screen
+  // unless it is brought into view. On desktop it is sticky and already visible.
+  useEffect(() => {
+    panelRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [voice.id])
   return (
-    <aside className="review-panel" data-testid="review-panel" aria-label={`Review ${voice.name}`}>
+    <aside ref={panelRef} className="review-panel" data-testid="review-panel" aria-label={`Review ${voice.name}`}>
       <div className="review-head">
         <div>
           <span className="review-kicker">Voice review</span>

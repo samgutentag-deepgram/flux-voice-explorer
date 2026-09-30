@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  IDLE_LISTEN,
   averageRating,
   evaluationFor,
+  trackListening,
   parseEvaluations,
   sortByEvaluation,
   type Evaluations,
@@ -21,6 +23,11 @@ describe('voice evaluations', () => {
 
   it('averages only dimensions the listener has scored', () => {
     expect(averageRating({ heard: true, notes: '', ratings: { naturalness: 5, fit: 3 }, updatedAt: 1 })).toBe(4)
+  })
+
+  it('keeps the live-test responsiveness score out of the average', () => {
+    expect(averageRating({ heard: true, notes: '', ratings: { latency: 1, fit: 5 }, updatedAt: 1 })).toBe(5)
+    expect(averageRating({ heard: true, notes: '', ratings: { latency: 4 }, updatedAt: 1 })).toBeNull()
   })
 
   it('does not pretend an unscored voice has a zero rating', () => {
@@ -49,5 +56,24 @@ describe('voice evaluations', () => {
       good: { heard: true, notes: 'yes', ratings: { naturalness: 5 }, updatedAt: 0 },
     })
     expect(parseEvaluations('not json')).toEqual({})
+  })
+
+  it('counts only audible forward playback toward heard', () => {
+    let t = trackListening(IDLE_LISTEN, { focusedId: 'a', playing: false, elapsed: 10 })
+    t = trackListening(t, { focusedId: 'a', playing: false, elapsed: 12 })
+    expect(t.listened).toBe(0)
+    t = trackListening(t, { focusedId: 'a', playing: true, elapsed: 12.5 })
+    t = trackListening(t, { focusedId: 'a', playing: true, elapsed: 13 })
+    expect(t.listened).toBeCloseTo(1)
+  })
+
+  it('ignores seeks and restarts the count on a new voice', () => {
+    let t = trackListening(IDLE_LISTEN, { focusedId: 'a', playing: true, elapsed: 1 })
+    t = trackListening(t, { focusedId: 'a', playing: true, elapsed: 40 })
+    expect(t.listened).toBe(0)
+    t = trackListening(t, { focusedId: 'a', playing: true, elapsed: 40.5 })
+    t = trackListening(t, { focusedId: 'b', playing: true, elapsed: 41 })
+    expect(t).toMatchObject({ id: 'b', listened: 0, marked: false })
+    expect(trackListening(t, { focusedId: null, playing: true, elapsed: 41 })).toBe(IDLE_LISTEN)
   })
 })
