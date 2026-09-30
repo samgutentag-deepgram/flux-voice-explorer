@@ -167,7 +167,7 @@ describe('useCaseValues', () => {
 describe('catalog filter values', () => {
   it('derives the language from the model suffix without changing the manifest contract', () => {
     expect(languageOf(voice({ id: 'flux-bree-en' }))).toBe('English')
-    expect(languageOf(voice({ id: 'flux-luz-es' }))).toBe('ES')
+    expect(languageOf(voice({ id: 'flux-luz-es' }))).toBe('Spanish')
     expect(languageValues([voice({ id: 'flux-bree-en' }), voice({ id: 'flux-kit-en' })])).toEqual(['English'])
   })
 

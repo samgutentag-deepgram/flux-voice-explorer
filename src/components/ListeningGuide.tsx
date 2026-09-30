@@ -14,6 +14,7 @@ export function ListeningGuide() {
         <section>
           <h2>Flux controls</h2>
           <p><code>expressivity</code> is a beta −2 to 2 calm-to-animated register offset. Zero is the production-tuned default.</p>
+          <p>Compare voices at the default. The calm and animated ends are registers for specific use cases, not quality levels.</p>
           <p><code>speed</code> changes pace. It is separate from expressivity and is not an emotion control.</p>
           <p><code>sample_rate=8000</code> with μ-law or A-law is the telephony profile. Sample rate is not bitrate.</p>
           <p>Language, accent, gender, age, characteristics, and use case describe a voice; they are selection metadata, not synthesis knobs.</p>

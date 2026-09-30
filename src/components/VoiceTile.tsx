@@ -141,100 +141,119 @@ export const VoiceTile = memo(function VoiceTile({
     player.setTrackStarts(voice.id, starts)
   }, [player, voice.id, starts])
 
+  // Listening and reviewing are separate actions. A tap on touch is the
+  // audition gesture, so the tile itself never opens the review panel; the
+  // Review button beside it does. The pointer and focus handlers live on the
+  // cell, not the tile, so moving onto that button is not "leaving the tile"
+  // and does not trip the auto-pause.
   return (
-    <button
-      type="button"
-      className="tile"
-      data-testid={`voice-tile-${voice.id}`}
-      data-focused={focused || undefined}
-      data-failed={failed || undefined}
-      data-orb={orb}
+    <div
+      className="tile-cell"
       onPointerEnter={() => onFocus(voice.id)}
       onPointerLeave={(e) => onFocus(null, e.pointerType === 'mouse')}
       onFocus={() => onFocus(voice.id)}
-      onBlur={() => onFocus(null, true)}
-      onClick={() => onReview(voice.id)}
-      aria-label={`${voice.name}, ${voice.accent} ${voice.age}. Hover or focus to hear.`}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onFocus(null, true)
+      }}
     >
-      <span
-        className="tile-fill"
-        style={{ transform: `scaleX(${focused ? localProgress : 0})` }}
-      />
-
-      {/* Name, accent line, and description are the only parts that survive to
-          phone width. The pace pip and the footer are hidden there by CSS, so
-          the markup is the same at every size -- see the MOBILE block in
-          app.css. The accent line sits inside .tile-head so that on a phone it
-          can share the first row with the name. */}
-      <span className="tile-head">
-        {/* Decorative: the name next to it already says which voice this is,
-            and the orb's color identifies a family of voices rather than one,
-            so reading it out would be a lie as often as not.
-
-            `data-reactive` is what tells CSS the level is real, so it can use
-            the fixed pulse when peaks.json has not been generated. */}
+      <button
+        type="button"
+        className="tile"
+        data-testid={`voice-tile-${voice.id}`}
+        data-focused={focused || undefined}
+        data-failed={failed || undefined}
+        data-orb={orb}
+        aria-label={`${voice.name}, ${voice.accent} ${voice.age}. Hover or focus to hear.`}
+      >
         <span
-          className="tile-orb"
-          aria-hidden="true"
-          data-reactive={levels ? '' : undefined}
-          style={orbLevel === null ? undefined : ({ '--orb-level': orbLevel } as CSSProperties)}
+          className="tile-fill"
+          style={{ transform: `scaleX(${focused ? localProgress : 0})` }}
         />
-        <span className="tile-name">{voice.name}</span>
-        <span className="tile-meta">{text.meta}</span>
-        <span className="tile-pace" title={`${text.duration} for the same script`}>
-          <span className="tile-pace-pip" style={{ left: `${paceRank * 100}%` }} />
+
+        {/* Name, accent line, and description are the only parts that survive to
+            phone width. The pace pip and the footer are hidden there by CSS, so
+            the markup is the same at every size -- see the MOBILE block in
+            app.css. The accent line sits inside .tile-head so that on a phone it
+            can share the first row with the name. */}
+        <span className="tile-head">
+          {/* Decorative: the name next to it already says which voice this is,
+              and the orb's color identifies a family of voices rather than one,
+              so reading it out would be a lie as often as not.
+
+              `data-reactive` is what tells CSS the level is real, so it can use
+              the fixed pulse when peaks.json has not been generated. */}
+          <span
+            className="tile-orb"
+            aria-hidden="true"
+            data-reactive={levels ? '' : undefined}
+            style={orbLevel === null ? undefined : ({ '--orb-level': orbLevel } as CSSProperties)}
+          />
+          <span className="tile-name">{voice.name}</span>
+          <span className="tile-meta">{text.meta}</span>
+          <span className="tile-pace" title={`${text.duration} for the same script`}>
+            <span className="tile-pace-pip" style={{ left: `${paceRank * 100}%` }} />
+          </span>
         </span>
-      </span>
 
-      <span className="tile-chars">{text.chars}</span>
+        <span className="tile-chars">{text.chars}</span>
 
-      {/* Only the audible tile draws its waveform. Thirty-six of these at once
-          would be noise, and the empty middle of an unfocused tile is what makes
-          the focused one obvious. */}
-      {focused && showWave && wavePath && (
-        <svg
-          className="tile-wave"
-          viewBox={`0 0 ${peaks!.length} 100`}
-          preserveAspectRatio="none"
-          aria-hidden="true"
-          onClick={(e) => {
-            // The tile is a button; do not let this also count as a tile press.
-            e.stopPropagation()
-            const box = e.currentTarget.getBoundingClientRect()
-            if (box.width > 0) onSeekLocal(voice.id, (e.clientX - box.left) / box.width)
-          }}
-        >
-          <defs>
-            <clipPath id={text.clipId}>
-              {/* One attribute per frame. The paths themselves never change. */}
-              {/* Rounded: the raw product stringifies to 17-digit floats like
-                  43.199999999999996 into the DOM every frame. */}
-              <rect
-                x="0"
-                y="0"
-                height="100"
-                width={Math.round(peaks!.length * localProgress * 100) / 100}
-              />
-            </clipPath>
-          </defs>
-          <path className="tile-wave-base" d={wavePath} />
-          <path className="tile-wave-played" d={wavePath} clipPath={`url(#${text.clipId})`} />
-        </svg>
-      )}
+        {/* Only the audible tile draws its waveform. Thirty-six of these at once
+            would be noise, and the empty middle of an unfocused tile is what makes
+            the focused one obvious. */}
+        {focused && showWave && wavePath && (
+          <svg
+            className="tile-wave"
+            viewBox={`0 0 ${peaks!.length} 100`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            onClick={(e) => {
+              // The tile is a button; do not let this also count as a tile press.
+              e.stopPropagation()
+              const box = e.currentTarget.getBoundingClientRect()
+              if (box.width > 0) onSeekLocal(voice.id, (e.clientX - box.left) / box.width)
+            }}
+          >
+            <defs>
+              <clipPath id={text.clipId}>
+                {/* One attribute per frame. The paths themselves never change. */}
+                {/* Rounded: the raw product stringifies to 17-digit floats like
+                    43.199999999999996 into the DOM every frame. */}
+                <rect
+                  x="0"
+                  y="0"
+                  height="100"
+                  width={Math.round(peaks!.length * localProgress * 100) / 100}
+                />
+              </clipPath>
+            </defs>
+            <path className="tile-wave-base" d={wavePath} />
+            <path className="tile-wave-played" d={wavePath} clipPath={`url(#${text.clipId})`} />
+          </svg>
+        )}
 
-      <span className="tile-foot">
-        <code className="tile-id">{voice.id}</code>
-        <span className="tile-status" aria-label="Review status">
-          {heard && <span title="Heard">heard</span>}
-          {hasNotes && <span title="Has notes">notes</span>}
-          {rating !== null && <span title="Average score">{rating.toFixed(1)}</span>}
+        <span className="tile-foot">
+          <code className="tile-id">{voice.id}</code>
+          <span className="tile-status" aria-label="Review status">
+            {heard && <span title="Heard">heard</span>}
+            {hasNotes && <span title="Has notes">notes</span>}
+            {rating !== null && <span title="Average score">{rating.toFixed(1)}</span>}
+          </span>
+          <span className="tile-dur">{text.duration}</span>
         </span>
-        <span className="tile-dur">{text.duration}</span>
-      </span>
 
-      {failed && <span className="tile-error">clip failed to load</span>}
+        {failed && <span className="tile-error">clip failed to load</span>}
 
-      <audio ref={audioRef} src={voice.clip} preload="metadata" />
-    </button>
+        <audio ref={audioRef} src={voice.clip} preload="metadata" />
+      </button>
+      <button
+        type="button"
+        className="tile-review"
+        data-testid={`review-${voice.id}`}
+        onClick={() => onReview(voice.id)}
+        aria-label={`Review ${voice.name}`}
+      >
+        Review
+      </button>
+    </div>
   )
 })

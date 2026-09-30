@@ -133,9 +133,16 @@ export function sortByName(voices: Voice[]): Voice[] {
   return [...voices].sort((a, b) => a.name.localeCompare(b.name))
 }
 
+const languageNames = new Intl.DisplayNames(['en'], { type: 'language' })
+
 export function languageOf(v: Voice): string {
   const code = v.id.match(/-([a-z]{2})$/i)?.[1]?.toLowerCase()
-  return code === 'en' ? 'English' : code?.toUpperCase() ?? 'Unknown'
+  if (!code) return 'Unknown'
+  try {
+    return languageNames.of(code) ?? code.toUpperCase()
+  } catch {
+    return code.toUpperCase()
+  }
 }
 
 export function languageValues(voices: Voice[]): string[] {

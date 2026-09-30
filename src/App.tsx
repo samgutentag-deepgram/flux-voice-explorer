@@ -23,7 +23,6 @@ import {
   voiceForProfile,
 } from './lib/voices.ts'
 import {
-  DEFAULT_AUDIO_PROFILE,
   EXPRESSIVITY_LEVELS,
   OUTPUT_PROFILES,
   audioProfileId,
@@ -31,7 +30,15 @@ import {
   type ExpressivityId,
   type OutputProfileId,
 } from './lib/audio-profiles.ts'
-import { averageRating, evaluationFor, sortByEvaluation, useEvaluations } from './lib/evaluations.ts'
+import {
+  HEARD_AFTER_SECONDS,
+  IDLE_LISTEN,
+  averageRating,
+  evaluationFor,
+  sortByEvaluation,
+  trackListening,
+  useEvaluations,
+} from './lib/evaluations.ts'
 import { orbFamily } from './lib/voice-orbs.ts'
 import { VoiceTile } from './components/VoiceTile.tsx'
 import { TransportBar } from './components/TransportBar.tsx'
@@ -58,7 +65,7 @@ export function App() {
   const [genderFilter, setGenderFilter] = useState('')
   const [useCaseFilter, setUseCaseFilter] = useState('')
   const [heardFilter, setHeardFilter] = useState('')
-  const [sortKey, setSortKey] = useState('name')
+  const [sortKey, setSortKey] = useState<'name' | 'notes' | 'rating'>('name')
   const [expressivity, setExpressivity] = useState<ExpressivityId>('default')
   const [outputProfile, setOutputProfile] = useState<OutputProfileId>('studio')
   const [reviewId, setReviewId] = useState<string | null>(null)
@@ -80,6 +87,7 @@ export function App() {
   const playerRef = useRef<SyncPlayer | null>(null)
   const retainedProgress = useRef(0)
   const pendingProfileState = useRef<{ focusedId: string | null; playing: boolean } | null>(null)
+  const listenRef = useRef(IDLE_LISTEN)
 
   /**
    * Stable handlers. Inline arrows here were a new identity on every render,
@@ -122,8 +130,7 @@ export function App() {
       player.pause()
     }
     player.focus(id)
-    if (id) updateEvaluation(id, { heard: true })
-  }, [updateEvaluation])
+  }, [])
 
   const handleSeek = useCallback((p: number) => playerRef.current?.seek(p), [])
   const handleSeekLocal = useCallback(
@@ -191,6 +198,12 @@ export function App() {
       referenceDuration: reference,
       onUpdate: (state) => {
         retainedProgress.current = state.progress
+        const listen = trackListening(listenRef.current, state)
+        if (listen.id && !listen.marked && listen.listened >= HEARD_AFTER_SECONDS) {
+          listen.marked = true
+          updateEvaluation(listen.id, { heard: true })
+        }
+        listenRef.current = listen
         setProgress(state.progress)
         setLocalProgress(state.localProgress)
         setElapsed(Math.floor(state.elapsed))
@@ -205,7 +218,7 @@ export function App() {
     })
     next.seek(retainedProgress.current)
     return next
-  }, [manifest, reference])
+  }, [manifest, reference, updateEvaluation])
 
   useEffect(() => {
     playerRef.current = player
@@ -379,11 +392,7 @@ export function App() {
                 ))}
               </select>
               <span className="profile-note">
-                {profileId === DEFAULT_AUDIO_PROFILE
-                  ? 'Production-tuned expression'
-                  : expressivity === 'default'
-                    ? 'Production-tuned expression'
-                    : 'Beta expressivity setting'}
+                {EXPRESSIVITY_LEVELS.find((level) => level.id === expressivity)?.note}
               </span>
             </fieldset>
           )}
@@ -441,7 +450,7 @@ export function App() {
             <option value="heard">Already heard</option>
           </select>
 
-          <select className="bar-select" value={sortKey} onChange={(e) => setSortKey(e.target.value)} aria-label="Sort voices">
+          <select className="bar-select" value={sortKey} onChange={(e) => setSortKey(e.target.value as typeof sortKey)} aria-label="Sort voices">
             <option value="name">Sort: name</option>
             <option value="notes">Sort: notes A–Z</option>
             <option value="rating">Sort: rating high–low</option>

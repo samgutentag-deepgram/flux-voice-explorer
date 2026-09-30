@@ -1,7 +1,7 @@
 export const EXPRESSIVITY_LEVELS = [
-  { id: 'calm', label: 'Calm', value: -2 },
-  { id: 'default', label: 'Tuned default', value: 0 },
-  { id: 'animated', label: 'Animated', value: 2 },
+  { id: 'calm', label: 'Calm', value: -2, note: 'Beta · calmer register for support and IVR, not an evaluation baseline' },
+  { id: 'default', label: 'Tuned default', value: 0, note: 'Production-tuned default' },
+  { id: 'animated', label: 'Animated', value: 2, note: 'Beta · more animated register, listen for extra or dropped words' },
 ] as const
 
 export const OUTPUT_PROFILES = [
