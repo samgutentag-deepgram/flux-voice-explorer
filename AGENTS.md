@@ -152,6 +152,9 @@ These are choices, not oversights. Do not "fix" them without reading why.
   and it forced a family-0 reset so that an unmapped tile would not inherit the
   audible voice's colors.
 
+  Since the `deepgram-2026` pack the families keep this mapping but are
+  repainted in the brand kit's palette; the pack comment has the hue mapping.
+
   The waveform's `--dg-orb-wave` is hand-picked per family, not read off a fixed
   gradient stop: the rule is the most chromatic stop that still clears about 4.5:1
   against the panel, which lands on `mid` six times and `hi` four times. The
@@ -159,12 +162,12 @@ These are choices, not oversights. Do not "fix" them without reading why.
   the near-white highlights are high-contrast but carry no identity, and the
   deep violets and forest greens are the reverse at 1.6-2.2:1. Families 5 and
   7 share a mint because it is the only stop either one has that clears.
-- **Which surfaces follow the voice, and which stay green.** Deliberate, so do
+- **Which surfaces follow the voice, and which stay on the accent (fuchsia since the deepgram-2026 pack).** Deliberate, so do
   not "finish" it either way without asking. Following the voice: the orb, the
   focused tile's waveform, the transport fill, the ticker's active word and its
   playhead marker. Staying `--dg-state-live`: the focused tile's border, its 2px
   progress hairline, the pace pip, and the transport's sentence marks. The split
-  is that the green things report playback state, which belongs to the
+  is that the accent-colored things report playback state, which belongs to the
   transport, not to whoever is speaking.
 - **The catalog is not hardcoded, and the endpoint is `/v2/models`.**
   `scripts/generate-clips.ts` asks the API what exists.

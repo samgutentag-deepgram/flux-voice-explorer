@@ -47,7 +47,9 @@ describe('orbFamily', () => {
 })
 
 describe('the orb style pack', () => {
-  const pack = read('../src/styles/packs/flux-2026.css')
+  // Whichever pack theme.css imports, so a rebrand is checked without editing this test.
+  const activePack = read('../src/styles/theme.css').match(/@import "\.\/packs\/([^"]+)";/)?.[1]
+  const pack = read(`../src/styles/packs/${activePack}`)
 
   it('defines all five slots for every family, and no extra family', () => {
     const missing: string[] = []

@@ -1,0 +1,188 @@
+/* ============================================================================
+   Deepgram style pack: deepgram-2026
+   ----------------------------------------------------------------------------
+   THIS IS THE ONLY FILE IN THE REPO ALLOWED TO CONTAIN LITERAL VALUES.
+   No hex, rgb(), oklch(), font stack, or brand radius anywhere else in src/.
+
+   Values from the Deepgram brand starter kit 2026 (PDF, p12-p14). Where the
+   kit is silent (radii, grey ramp, shadows, motion, deep shades) the value is
+   marked INFERRED and read off the kit's own layouts.
+
+   To rebrand: copy this file, change the values, keep every token name
+   identical, and repoint the single @import in theme.css. Never add a token
+   here that other packs do not also define.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- palette: surfaces -------------------------------------------------
+     Off-black #1D1D1D (kit primary) over pure black (kit functional). Glass
+     is the kit's material for informational panels (p14), so the alpha and
+     the backdrop blur stay. */
+  --dg-surface-page: #000;
+  --dg-surface-raised: rgba(29, 29, 29, 0.94);
+  --dg-surface-glass: rgba(29, 29, 29, 0.72);
+  --dg-surface-scrim: rgba(0, 0, 0, 0.5);
+  --dg-surface-deep: #0e0e0e;
+
+  /* ---- palette: ink ------------------------------------------------------
+     Off-white #FCFAF8 and light gray #C4C4C4 are the kit's. muted and faint
+     are INFERRED steps between light gray and off-black. */
+  --dg-ink-primary: #fcfaf8;
+  --dg-ink-secondary: #c4c4c4;
+  --dg-ink-muted: #8a8a8a;
+  --dg-ink-faint: #5e5e5e;
+
+  /* ---- palette: strokes (INFERRED, off-white at the old alphas) --------- */
+  --dg-line-hairline: rgba(252, 250, 248, 0.08);
+  --dg-line-hover: rgba(252, 250, 248, 0.16);
+  --dg-line-active: rgba(252, 250, 248, 0.28);
+
+  /* ---- palette: accent ---------------------------------------------------
+     Fuchsia #E042FF is the kit's hero color, and it is the one accent: live
+     state, focus ring, primary action. 5.2:1 on the panel, 6.4:1 on black.
+     accent-alt feeds the error state, so it is Clay #EB2A2E, the kit's red. */
+  --dg-accent: #e042ff;
+  --dg-accent-dim: #6b2179;
+  --dg-accent-alt: #eb2a2e;
+
+  /* ---- palette: grey ramp (100 is kit light gray, the rest INFERRED) ---- */
+  --dg-grey-100: #c4c4c4;
+  --dg-grey-200: #8a8a8a;
+  --dg-grey-300: #5e5e5e;
+  --dg-grey-400: #474747;
+  --dg-grey-500: #2a2a2a;
+
+  /* ---- type --------------------------------------------------------------
+     The kit's headline face, Perfektta, is licensed to the design team only.
+     Work Sans is its named stand-in (p12) and also the body face. Azeret Mono
+     is for product surfaces, code, and CTAs. Both load from Google Fonts in
+     index.html. */
+  --dg-font-display: "Work Sans", system-ui, sans-serif;
+  --dg-font-ui: "Work Sans", system-ui, sans-serif;
+  --dg-font-mono: "Azeret Mono", ui-monospace, Menlo, monospace;
+
+  --dg-weight-regular: 400;
+  --dg-weight-medium: 500;
+
+  /* ---- geometry (INFERRED from the kit's cards and pill CTAs) ----------- */
+  --dg-radius-sm: 8px;
+  --dg-radius-md: 12px;
+  --dg-radius-lg: 20px;
+  --dg-radius-round: 50%;
+
+  /* ---- elevation (INFERRED) --------------------------------------------- */
+  --dg-shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.65);
+  --dg-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --dg-blur-glass: 18px;
+
+  /* ---- motion (unchanged; the kit has no motion guidance) --------------- */
+  --dg-motion-breathe: 6s;
+  --dg-motion-pulse: 1.05s;
+  --dg-motion-fast: 160ms;
+  --dg-motion-base: 280ms;
+  --dg-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dg-motion-orb-smooth: 90ms;
+
+  /* ---- palette: voice orbs -----------------------------------------------
+     Same TEN families and the same voice -> family mapping as the official orb
+     SVGs (`src/lib/voice-orbs.ts`), repainted in the kit's palette. Each
+     original stop moved to the nearest kit hue: orange -> Bakelite, amber ->
+     Brass, violet/royal -> LED, azure -> Glass, greens/mint -> Phosphor,
+     pink/rose -> Fuchsia, deep orange -> Clay. Where two families collapsed
+     onto the same kit colors, one stop was swapped so each family stays
+     distinct.
+
+     Pure kit hues are used for mid and hi. The deep base/glow shades are
+     INFERRED darkenings of LED (#3b1a78) and Phosphor (#2c5216, #3e6e20),
+     because the kit has no dark supporting colors and an orb needs depth.
+
+     `wave` still follows the rule: the most chromatic stop that clears about
+     4.5:1 on the panel (#1b1b1b). Measured: Brass 14.6, Phosphor 9.7, Glass
+     7.2, Bakelite 6.7, Fuchsia 5.2. LED (3.2) and Clay (4.0) fail, so they
+     never carry a waveform. */
+  --dg-orb-void: rgb(20, 20, 20);
+
+  /* f1  Bakelite under Brass, off-white core. 5 voices. */
+  --dg-orb-f1-base: #fa8100;
+  --dg-orb-f1-mid: #f7f300;
+  --dg-orb-f1-hi: #fcfaf8;
+  --dg-orb-f1-glow: var(--dg-orb-f1-base);
+  --dg-orb-f1-wave: var(--dg-orb-f1-mid);
+
+  /* f2  LED into Fuchsia with a Bakelite underlight. 3 voices. */
+  --dg-orb-f2-base: #7f39ff;
+  --dg-orb-f2-mid: #e042ff;
+  --dg-orb-f2-hi: #fa8100;
+  --dg-orb-f2-glow: #3b1a78;
+  --dg-orb-f2-wave: var(--dg-orb-f2-mid);
+
+  /* f3  deep green into Phosphor, Glass core. 4 voices. */
+  --dg-orb-f3-base: #2c5216;
+  --dg-orb-f3-mid: #7cd941;
+  --dg-orb-f3-hi: #00b2ff;
+  --dg-orb-f3-glow: #3e6e20;
+  --dg-orb-f3-wave: var(--dg-orb-f3-mid);
+
+  /* f4  LED into Glass, off-white core. Brooke only. */
+  --dg-orb-f4-base: #7f39ff;
+  --dg-orb-f4-mid: #00b2ff;
+  --dg-orb-f4-hi: #fcfaf8;
+  --dg-orb-f4-glow: #3b1a78;
+  --dg-orb-f4-wave: var(--dg-orb-f4-mid);
+
+  /* f5  deep green and LED under Phosphor. 4 voices. */
+  --dg-orb-f5-base: #2c5216;
+  --dg-orb-f5-mid: #7f39ff;
+  --dg-orb-f5-hi: #7cd941;
+  --dg-orb-f5-glow: var(--dg-orb-f5-base);
+  --dg-orb-f5-wave: var(--dg-orb-f5-hi);
+
+  /* f6  deep LED into Glass, Fuchsia core. 4 voices. */
+  --dg-orb-f6-base: #3b1a78;
+  --dg-orb-f6-mid: #00b2ff;
+  --dg-orb-f6-hi: #e042ff;
+  --dg-orb-f6-glow: var(--dg-orb-f6-base);
+  --dg-orb-f6-wave: var(--dg-orb-f6-mid);
+
+  /* f7  LED and deep LED under Phosphor. 5 voices. */
+  --dg-orb-f7-base: #7f39ff;
+  --dg-orb-f7-mid: #3b1a78;
+  --dg-orb-f7-hi: #7cd941;
+  --dg-orb-f7-glow: var(--dg-orb-f7-base);
+  --dg-orb-f7-wave: var(--dg-orb-f7-hi);
+
+  /* f8  deep LED into LED into Fuchsia. 5 voices. */
+  --dg-orb-f8-base: #3b1a78;
+  --dg-orb-f8-mid: #7f39ff;
+  --dg-orb-f8-hi: #e042ff;
+  --dg-orb-f8-glow: var(--dg-orb-f8-mid);
+  --dg-orb-f8-wave: var(--dg-orb-f8-hi);
+
+  /* f9  Clay into Bakelite, Fuchsia core. 4 voices. */
+  --dg-orb-f9-base: #eb2a2e;
+  --dg-orb-f9-mid: #fa8100;
+  --dg-orb-f9-hi: #e042ff;
+  --dg-orb-f9-glow: var(--dg-orb-f9-base);
+  --dg-orb-f9-wave: var(--dg-orb-f9-mid);
+
+  /* f10  two deep greens under Brass. Jack only. */
+  --dg-orb-f10-base: #2c5216;
+  --dg-orb-f10-mid: #3e6e20;
+  --dg-orb-f10-hi: #f7f300;
+  --dg-orb-f10-glow: var(--dg-orb-f10-mid);
+  --dg-orb-f10-wave: var(--dg-orb-f10-hi);
+}
+
+/* Both signature motifs must stop when asked. The reference implementation
+   does not do this; do not inherit that bug. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dg-motion-breathe: 0s;
+    --dg-motion-pulse: 0s;
+    --dg-motion-orb-smooth: 0s;
+    --dg-motion-fast: 0s;
+    --dg-motion-base: 0s;
+  }
+}

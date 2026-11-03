@@ -1,10 +1,19 @@
 # Style pack
 
-Active pack: **`flux-2026`** (`src/styles/packs/flux-2026.css`).
+Active pack: **`deepgram-2026`** (`src/styles/packs/deepgram-2026.css`).
 
-Dark-first, near-black glass surfaces, one electric green accent, hairline
-white-alpha borders. Values observed from the app behind
-<https://talk.deepgram.com/>.
+Deepgram brand starter kit 2026: off-black glass surfaces, fuchsia `#E042FF`
+as the one accent (live state, focus, primary action), Work Sans for display
+and body, Azeret Mono for labels and small CTAs. The ten voice-orb families
+keep their official voice mapping, repainted in the kit's supporting colors.
+Values the kit does not give (radii, grey ramp, deep shades) are marked
+INFERRED in the pack.
+
+The wordmark is `src/components/DeepgramLogo.tsx`, verbatim paths from
+developers.deepgram.com with `currentColor` fill, so it carries no literal.
+
+Previous pack: `flux-2026` (green accent, Space Grotesk/Inter/Fira Code),
+kept in `packs/` for comparison.
 
 ## The seal
 
@@ -17,7 +26,7 @@ the whole rebrand surface.
 
 ## To rebrand
 
-1. `cp src/styles/packs/flux-2026.css src/styles/packs/<name>-<year>.css`
+1. `cp src/styles/packs/deepgram-2026.css src/styles/packs/<name>-<year>.css`
 2. Change the values. Keep every token name identical.
 3. Repoint the one `@import` in `theme.css`.
 4. Update this file.
