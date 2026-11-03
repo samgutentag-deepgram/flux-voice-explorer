@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DeepgramLogo } from './components/DeepgramLogo.tsx'
 import { SyncPlayer } from './lib/sync-player.ts'
 import { loadPeaks, type ClipPeaks } from './lib/peaks.ts'
 import {
@@ -360,6 +361,9 @@ export function App() {
     <div className="app">
       <header className="bar">
         <div className="bar-title">
+          <a className="bar-logo" href="https://deepgram.com" aria-label="Deepgram home">
+            <DeepgramLogo />
+          </a>
           <h1>Flux Voice Explorer</h1>
           <p className="bar-sub">
             {manifest.voices.length} voices, same script. Hover a tile to hear it.

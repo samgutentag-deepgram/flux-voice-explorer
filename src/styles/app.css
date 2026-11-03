@@ -34,13 +34,30 @@ body {
   justify-content: space-between;
   padding: 1.1rem 1.4rem 0.9rem;
   border-bottom: 1px solid var(--dg-border);
-  background: var(--dg-bg-panel);
+  /* The kit's signature move is fuchsia fading out (p5, p31). Kept faint here:
+     the header is chrome, the voices are the content. */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dg-accent) 16%, var(--dg-bg-panel)), var(--dg-bg-panel) 85%);
+}
+
+/* The wordmark stands alone above the title: the brand kit forbids locking it
+   up with another element (p9), so it gets its own line and clear space. */
+.bar-logo {
+  display: block;
+  width: 7.5rem;
+  margin-bottom: 0.7rem;
+  color: var(--dg-text-primary);
+}
+
+.bar-logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .bar h1 {
   margin: 0;
-  font-size: 1.05rem;
-  letter-spacing: 0.01em;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
   color: var(--dg-text-primary);
 }
 
@@ -70,6 +87,7 @@ body {
 .profile-controls legend {
   padding: 0 0.25rem;
   color: var(--dg-text-label);
+  font-family: var(--dg-font-mono);
   font-size: 0.66rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -559,7 +577,11 @@ body {
   border: 1px solid var(--dg-border);
   border-radius: var(--dg-shape-control);
   font: inherit;
-  font-size: 0.6rem;
+  /* Small CTAs are uppercase Azeret Mono in the kit (p8, p12). */
+  font-family: var(--dg-font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   line-height: 1.2;
   cursor: pointer;
 }
@@ -813,9 +835,15 @@ body {
   background: var(--dg-state-live);
 }
 
+/* Work Sans sets wider than the old Inter, so at six across these wrapped and
+   pushed the footer out of the 16:9 tile. One line each, ellipsized. */
 .tile-meta {
-  font-size: 0.72rem;
+  display: block;
+  font-size: 0.66rem;
   color: var(--dg-text-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tile-chars {
@@ -824,6 +852,8 @@ body {
   line-height: 1.35;
   color: var(--dg-text-body);
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The waveform takes the slack the description used to hold, which is the empty
@@ -859,7 +889,7 @@ body {
   align-items: baseline;
   justify-content: space-between;
   padding-bottom: 0.1rem;
-  padding-right: 3.2rem;
+  padding-right: 3.9rem;
 }
 
 .tile-id {
@@ -945,6 +975,12 @@ body {
   background: var(--dg-state-live);
   border-radius: var(--dg-shape-orb);
   animation: breathe var(--dg-anim-breathe) var(--dg-anim-ease) infinite;
+}
+
+.curtain-inner > span:nth-child(2) {
+  font-family: var(--dg-font-display);
+  font-size: 1.05rem;
+  color: var(--dg-text-primary);
 }
 
 .curtain-keys {
